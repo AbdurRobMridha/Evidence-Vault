@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /evidence/{evidenceId} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+        && request.resource.data.uploaded_by == request.auth.uid
+        && request.resource.data.client_sha256 is string
+        && !(request.resource.data.keys().hasAny(['server_sha256','integrity_status','upload_timestamp','verification_timestamp','audit_log_ids']))
+        && request.resource.data.file_name is string
+        && request.resource.data.file_size is number
+        && request.resource.data.mime_type is string
+        && request.resource.data.case_id is string;
+
+      allow update: if request.auth != null
+        && request.resource.data.client_sha256 == resource.data.client_sha256
+        && request.resource.data.uploaded_by == resource.data.uploaded_by
+        && request.resource.data.server_sha256 == resource.data.server_sha256
+        && request.resource.data.integrity_status == resource.data.integrity_status
+        && request.resource.data.verification_timestamp == resource.data.verification_timestamp
+        // allow adding non-integrity metadata like 'notes' or 'tags'
+        && (request.resource.data.keys().hasOnly(resource.data.keys().union(['notes','tags','last_accessed'])));
+
+      allow delete: if false;
+    }
+
+    match /evidence_audit_logs/{logId} {
+      allow read: if true;
+      allow create: if false; // only server/Cloud Functions (admin SDK) may write
+      allow update, delete: if false;
+    }
+
+  }
+}

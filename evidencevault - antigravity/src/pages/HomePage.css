@@ -1,0 +1,487 @@
+/* ═══════════════════════════════════════════════
+   Evidence Vault — Home Page Styles
+   Legal-Tech Forensic Platform Landing
+   ═══════════════════════════════════════════════ */
+
+/* ─── Animated Gradient Background ─────────── */
+.ev-hero-bg {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #09090b 0%, #0c1220 30%, #091a1a 60%, #09090b 100%);
+}
+
+.ev-hero-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 800px 500px at 20% 40%, rgba(16, 185, 129, 0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 600px 400px at 80% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 70%),
+        radial-gradient(ellipse 400px 300px at 50% 80%, rgba(16, 185, 129, 0.03) 0%, transparent 70%);
+    animation: ev-bg-pulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes ev-bg-pulse {
+    0% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+/* ─── Floating Particles ──────────────────── */
+.ev-particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.ev-particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.3);
+    animation: ev-float linear infinite;
+}
+
+.ev-particle:nth-child(1) {
+    left: 10%;
+    animation-duration: 18s;
+    animation-delay: 0s;
+    top: 90%;
+}
+
+.ev-particle:nth-child(2) {
+    left: 20%;
+    animation-duration: 22s;
+    animation-delay: -3s;
+    top: 85%;
+    width: 2px;
+    height: 2px;
+    background: rgba(59, 130, 246, 0.25);
+}
+
+.ev-particle:nth-child(3) {
+    left: 35%;
+    animation-duration: 16s;
+    animation-delay: -6s;
+    top: 95%;
+}
+
+.ev-particle:nth-child(4) {
+    left: 50%;
+    animation-duration: 20s;
+    animation-delay: -2s;
+    top: 88%;
+    width: 4px;
+    height: 4px;
+    background: rgba(16, 185, 129, 0.2);
+}
+
+.ev-particle:nth-child(5) {
+    left: 65%;
+    animation-duration: 24s;
+    animation-delay: -5s;
+    top: 92%;
+    width: 2px;
+    height: 2px;
+}
+
+.ev-particle:nth-child(6) {
+    left: 78%;
+    animation-duration: 19s;
+    animation-delay: -8s;
+    top: 87%;
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.ev-particle:nth-child(7) {
+    left: 88%;
+    animation-duration: 21s;
+    animation-delay: -1s;
+    top: 93%;
+}
+
+.ev-particle:nth-child(8) {
+    left: 45%;
+    animation-duration: 17s;
+    animation-delay: -10s;
+    top: 80%;
+    width: 2px;
+    height: 2px;
+    background: rgba(16, 185, 129, 0.15);
+}
+
+.ev-particle:nth-child(9) {
+    left: 5%;
+    animation-duration: 25s;
+    animation-delay: -4s;
+    top: 96%;
+    width: 2px;
+    height: 2px;
+}
+
+.ev-particle:nth-child(10) {
+    left: 92%;
+    animation-duration: 15s;
+    animation-delay: -7s;
+    top: 82%;
+    background: rgba(59, 130, 246, 0.15);
+}
+
+@keyframes ev-float {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* ─── Section Reveal Animation ────────────── */
+.ev-reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ev-reveal.ev-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ─── Stagger Delay Classes ───────────────── */
+.ev-delay-1 {
+    transition-delay: 0.1s;
+}
+
+.ev-delay-2 {
+    transition-delay: 0.2s;
+}
+
+.ev-delay-3 {
+    transition-delay: 0.3s;
+}
+
+.ev-delay-4 {
+    transition-delay: 0.4s;
+}
+
+.ev-delay-5 {
+    transition-delay: 0.5s;
+}
+
+.ev-delay-6 {
+    transition-delay: 0.6s;
+}
+
+/* ─── Glass Card ──────────────────────────── */
+.ev-glass-card {
+    background: rgba(24, 24, 27, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(63, 63, 70, 0.4);
+    border-radius: 16px;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.4s ease,
+        border-color 0.4s ease;
+}
+
+.ev-glass-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(16, 185, 129, 0.05);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* ─── Workflow Step Card ──────────────────── */
+.ev-step-card {
+    position: relative;
+    background: rgba(24, 24, 27, 0.5);
+    border: 1px solid rgba(63, 63, 70, 0.3);
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ev-step-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 20px 50px rgba(16, 185, 129, 0.08);
+}
+
+.ev-step-card .ev-step-num {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #09090b;
+    font-size: 0.75rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* ─── Glowing Security Section ────────────── */
+.ev-glow-border {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.ev-glow-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    padding: 2px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.5), rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.5));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: ev-glow-rotate 6s linear infinite;
+}
+
+@keyframes ev-glow-rotate {
+    0% {
+        background: linear-gradient(0deg, rgba(16, 185, 129, 0.5), rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.5));
+    }
+
+    25% {
+        background: linear-gradient(90deg, rgba(16, 185, 129, 0.5), rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.5));
+    }
+
+    50% {
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.5), rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.5));
+    }
+
+    75% {
+        background: linear-gradient(270deg, rgba(16, 185, 129, 0.5), rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.5));
+    }
+
+    100% {
+        background: linear-gradient(360deg, rgba(16, 185, 129, 0.5), rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.5));
+    }
+}
+
+/* ─── Shield Pulse Animation ──────────────── */
+.ev-shield-pulse {
+    animation: ev-pulse-ring 2.5s ease-in-out infinite;
+}
+
+@keyframes ev-pulse-ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 0 16px rgba(16, 185, 129, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+/* ─── Button Hover Glow ───────────────────── */
+.ev-btn-glow {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.ev-btn-glow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+    opacity: 0;
+    transform: translateX(-100%);
+    transition: none;
+}
+
+.ev-btn-glow:hover::after {
+    opacity: 1;
+    transform: translateX(100%);
+    transition: transform 0.6s ease;
+}
+
+.ev-btn-glow:hover {
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+}
+
+/* ─── Responsive ──────────────────────────── */
+@media (max-width: 768px) {
+    .ev-hero-title {
+        font-size: 2rem !important;
+        line-height: 1.2 !important;
+    }
+
+    .ev-section-padding {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+    .ev-hero-title {
+        font-size: 2.5rem !important;
+    }
+}
+
+/* ─── Smooth Scroll ───────────────────────── */
+html {
+    scroll-behavior: smooth;
+}
+
+/* ═══════════════════════════════════════════════
+   DEAD-MAN SWITCH SECTION STYLES
+   Safety & Emergency Protection Feature
+   ═══════════════════════════════════════════════ */
+
+/* ─── DMS Main Card Glow Border ──────────── */
+.ev-dms-glow-card {
+    position: relative;
+    background: rgba(24, 24, 27, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    box-shadow:
+        0 0 40px rgba(245, 158, 11, 0.04),
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(245, 158, 11, 0.08);
+    transition: box-shadow 0.4s ease, border-color 0.4s ease;
+    animation: ev-dms-border-breathe 4s ease-in-out infinite alternate;
+}
+
+@keyframes ev-dms-border-breathe {
+    0% {
+        border-color: rgba(245, 158, 11, 0.15);
+        box-shadow:
+            0 0 20px rgba(245, 158, 11, 0.03),
+            0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    100% {
+        border-color: rgba(245, 158, 11, 0.35);
+        box-shadow:
+            0 0 50px rgba(245, 158, 11, 0.08),
+            0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* ─── DMS Animated Shield Icon ───────────── */
+.ev-dms-shield {
+    animation: ev-dms-pulse 2.5s ease-in-out infinite;
+    position: relative;
+}
+
+.ev-dms-shield::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 18px;
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    animation: ev-dms-ring-expand 2.5s ease-in-out infinite;
+}
+
+@keyframes ev-dms-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 0 14px rgba(245, 158, 11, 0);
+    }
+}
+
+@keyframes ev-dms-ring-expand {
+
+    0%,
+    100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0;
+        transform: scale(1.15);
+    }
+}
+
+/* ─── DMS Step Card ───────────────────────── */
+.ev-dms-step {
+    position: relative;
+    background: rgba(24, 24, 27, 0.5);
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    border-radius: 16px;
+    padding: 1.75rem 1.25rem;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ev-dms-step:hover {
+    transform: translateY(-8px) scale(1.02);
+    border-color: rgba(245, 158, 11, 0.4);
+    box-shadow: 0 20px 50px rgba(245, 158, 11, 0.07);
+}
+
+.ev-dms-step .ev-dms-step-num {
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #09090b;
+    font-size: 0.7rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+/* ─── DMS Section Background Accent ──────── */
+#deadman {
+    position: relative;
+}
+
+#deadman::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 600px 400px at 10% 50%, rgba(245, 158, 11, 0.025) 0%, transparent 70%),
+        radial-gradient(ellipse 400px 300px at 90% 30%, rgba(245, 158, 11, 0.02) 0%, transparent 70%);
+    pointer-events: none;
+}
