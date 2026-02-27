@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, FileText, AlertTriangle, Settings, Users, LogOut, Home } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Settings, Users, LogOut, Home, Cpu, Radar, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './lib/firebase';
@@ -10,10 +10,13 @@ import Dashboard from './pages/Dashboard';
 import CaseDetails from './pages/CaseDetails';
 import EvidenceUpload from './pages/EvidenceUpload';
 import AuthorityDashboard from './pages/AuthorityDashboard';
+import AIAnalysisPage from './pages/AIAnalysisPage';
 import SettingsPage from './pages/SettingsPage';
 import Login from './pages/Login';
 import HomePage from './pages/HomePage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
+import SocialMonitoringPage from './pages/SocialMonitoringPage';
+import { getUnreadAlertCount } from './lib/socialMonitorStore';
 
 // ─── Protected Route ──────────────────────────────────────────────────────────
 function ProtectedRoute({ user, children }: { user: any; children: React.ReactNode }) {
@@ -73,7 +76,7 @@ function Layout({ children, user, onLogout }: { children: React.ReactNode; user:
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/upload') ? 'bg-zinc-800/50 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100'}`}
           >
             <AlertTriangle className="w-4 h-4" />
-            New Evidence
+            New Case
           </button>
           {user?.role === 'admin' && (
             <button
@@ -84,6 +87,27 @@ function Layout({ children, user, onLogout }: { children: React.ReactNode; user:
               Authority Dashboard
             </button>
           )}
+          <button
+            onClick={() => navigate('/ai-analysis')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/ai-analysis') ? 'bg-zinc-800/50 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100'}`}
+          >
+            <Cpu className="w-4 h-4" />
+            AI Analysis
+          </button>
+          <button
+            onClick={() => navigate('/social-monitor')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/social-monitor') ? 'bg-zinc-800/50 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100'}`}
+          >
+            <div className="relative">
+              <Radar className="w-4 h-4" />
+              {getUnreadAlertCount() > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-red-500 rounded-full text-white text-[8px] flex items-center justify-center font-bold">
+                  {getUnreadAlertCount() > 9 ? '9+' : getUnreadAlertCount()}
+                </span>
+              )}
+            </div>
+            Social Monitor
+          </button>
           <button
             onClick={() => navigate('/settings')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/settings') ? 'bg-zinc-800/50 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100'}`}
@@ -255,11 +279,32 @@ export default function App() {
           }
         />
         <Route
+          path="/ai-analysis"
+          element={
+            <ProtectedRoute user={user}>
+              <Layout user={user} onLogout={handleLogout}>
+                <AIAnalysisPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/authority"
           element={
             <ProtectedRoute user={user}>
               <Layout user={user} onLogout={handleLogout}>
                 {user?.role === 'admin' ? <AuthorityDashboard /> : <Navigate to="/dashboard" replace />}
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/social-monitor"
+          element={
+            <ProtectedRoute user={user}>
+              <Layout user={user} onLogout={handleLogout}>
+                <SocialMonitoringPage user={user} />
               </Layout>
             </ProtectedRoute>
           }

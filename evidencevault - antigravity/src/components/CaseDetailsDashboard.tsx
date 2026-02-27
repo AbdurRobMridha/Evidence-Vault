@@ -4,6 +4,8 @@ import { EvidenceRecord, generateEvidenceRecord } from '../lib/forensicRecords';
 import EvidenceRecordDisplay from './EvidenceRecordDisplay';
 import ForensicReportPanel from './ForensicReportPanel';
 import { handleDownloadEvidence } from '../lib/evidenceDownload';
+import { getEvidenceForCase, saveEvidenceToCase, removeEvidenceFromCase, type StoredEvidenceMeta } from '../lib/evidenceStore';
+import { appendAuditEntry } from '../lib/auditLog';
 
 interface CaseFile {
   id: string;
@@ -102,10 +104,33 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
 
 
 
-  // Load files/evidence from backend (falls back to demo mock if API fails)
+  // Load files/evidence from localStorage evidence store first, fallback API
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      // 1) Try localStorage evidence store
+      const stored = getEvidenceForCase(caseId);
+      if (stored.length > 0) {
+        const localFiles: CaseFile[] = stored.map(ev => ({
+          id: ev.id,
+          name: ev.file_name,
+          type: ev.file_type,
+          size: typeof ev.file_size === 'number' ? `${(ev.file_size / 1024 / 1024).toFixed(2)} MB` : String(ev.file_size),
+          dateModified: ev.upload_timestamp,
+          clientHash: ev.client_sha256,
+          serverHash: ev.server_sha256,
+          integrityStatus: ev.integrity_status,
+          uploadedBy: ev.uploaded_by,
+          uploadTimestamp: ev.upload_timestamp,
+        }));
+        if (!cancelled) {
+          setFiles(localFiles);
+          setEvidenceRecords(localFiles.map(f => generateEvidenceRecord(f.name, f.type, f.size, f.clientHash || '', f.serverHash || '', f.uploadedBy, f.uploadTimestamp, caseId)));
+        }
+        return;
+      }
+
+      // 2) Try API
       try {
         const resp = await fetch(`/api/cases/${caseId}`);
         if (!resp.ok) throw new Error('API fetch failed');
@@ -126,39 +151,12 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
         }));
 
         setFiles(fetchedFiles);
-
-        const records = fetchedFiles.map(file =>
-          generateEvidenceRecord(
-            file.name,
-            file.type,
-            file.size,
-            file.clientHash || '',
-            file.serverHash || '',
-            file.uploadedBy,
-            file.uploadTimestamp,
-            caseId
-          )
-        );
-        setEvidenceRecords(records);
+        setEvidenceRecords(fetchedFiles.map(file => generateEvidenceRecord(file.name, file.type, file.size, file.clientHash || '', file.serverHash || '', file.uploadedBy, file.uploadTimestamp, caseId)));
       } catch (err) {
-        // fallback to demo data if API is unavailable
-        console.warn('Failed to load case evidence, using demo data.', err);
-        const mockFiles: CaseFile[] = [
-          {
-            id: 'file-1',
-            name: 'screenshot_evidence.png',
-            type: 'PNG Image',
-            size: '2.4 MB',
-            dateModified: new Date(Date.now() - 3600000).toISOString(),
-            clientHash: 'a3f5b6c8d9e2f1a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6',
-            serverHash: 'a3f5b6c8d9e2f1a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6',
-            integrityStatus: 'VERIFIED',
-            uploadedBy: uploadedBy,
-            uploadTimestamp: new Date(Date.now() - 3600000).toISOString(),
-          }
-        ];
-        setFiles(mockFiles);
-        setEvidenceRecords(mockFiles.map(file => generateEvidenceRecord(file.name, file.type, file.size, file.clientHash || '', file.serverHash || '', file.uploadedBy, file.uploadTimestamp, caseId)));
+        console.warn('No evidence found for case', caseId);
+        // Start with empty — no mock data
+        setFiles([]);
+        setEvidenceRecords([]);
       }
     }
     load();
@@ -204,6 +202,9 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
       }
 
       // Store file as base64 in localStorage for download later
+      // Declare storageKey BEFORE try so it's accessible after the block
+      let storageKey = '';
+      let storageSuccess = false;
       try {
         const base64Data = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -212,7 +213,8 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
           reader.readAsDataURL(file);
         });
 
-        const storageKey = `evidence_${Date.now()}_${i}`;
+        // Build key once and reuse — never call Date.now() again for this file
+        storageKey = `evidence_${Date.now()}_${i}`;
         localStorage.setItem(storageKey, JSON.stringify({
           name: file.name,
           type: file.type,
@@ -222,24 +224,52 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
           uploadedAt: new Date().toISOString()
         }));
         console.log('[Dashboard Upload] Stored file in localStorage:', storageKey);
-      } catch (err) {
+        storageSuccess = true;
+      } catch (err: any) {
         console.warn('[Dashboard Upload] Failed to store file data:', err);
+        const errMsg = err.name === 'QuotaExceededError'
+          ? `File "${file.name}" is too large for browser storage limit.`
+          : `Failed to store file "${file.name}".`;
+        alert(errMsg);
+        continue; // Skip adding this file since it was not stored
       }
 
+      if (!storageSuccess) continue;
+
+      const uploadTimestamp = new Date().toISOString();
+      const fileId = `file-${Date.now()}-${i}`;
+
       const newFile: CaseFile = {
-        id: `file-${Date.now()}-${i}`,
+        id: fileId,
         name: file.name,
         type: file.type || 'Unknown',
         size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        dateModified: new Date().toISOString(),
+        dateModified: uploadTimestamp,
         clientHash: fileHash,
         serverHash: fileHash,
         integrityStatus: 'VERIFIED',
         uploadedBy: uploadedBy,
-        uploadTimestamp: new Date().toISOString(),
+        uploadTimestamp,
       };
 
       setFiles(prev => [newFile, ...prev]);
+
+      // Persist evidence metadata — reuse the exact storageKey captured above
+      saveEvidenceToCase(caseId, {
+        id: newFile.id,
+        file_name: newFile.name,
+        file_type: newFile.type,
+        file_size: file.size,
+        client_sha256: newFile.clientHash,
+        server_sha256: newFile.serverHash,
+        uploaded_by: newFile.uploadedBy,
+        upload_timestamp: newFile.uploadTimestamp,
+        integrity_status: 'VERIFIED',
+        storageKey,   // ← same key that holds the actual file data
+      });
+
+      // Log audit entry
+      appendAuditEntry(caseId, 'evidence_uploaded', uploadedBy, 'user', `Uploaded: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
 
       // Generate evidence record
       const record = generateEvidenceRecord(
@@ -262,13 +292,55 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
     setUploadProgress(null);
   };
 
+  const handleNewFolder = () => {
+    const folderName = window.prompt("Enter new folder name:");
+    if (!folderName || folderName.trim() === '') return;
+
+    const newFolder: CaseFile = {
+      id: `folder-${Date.now()}`,
+      name: folderName.trim(),
+      type: 'Folder',
+      size: '--',
+      dateModified: new Date().toISOString(),
+      clientHash: '-',
+      serverHash: '-',
+      integrityStatus: 'PENDING',
+      uploadedBy: uploadedBy,
+      uploadTimestamp: new Date().toISOString(),
+    };
+
+    setFiles(prev => [newFolder, ...prev]);
+
+    saveEvidenceToCase(caseId, {
+      id: newFolder.id,
+      file_name: newFolder.name,
+      file_type: newFolder.type,
+      file_size: 0,
+      client_sha256: newFolder.clientHash || '',
+      server_sha256: newFolder.serverHash || '',
+      uploaded_by: newFolder.uploadedBy,
+      upload_timestamp: newFolder.uploadTimestamp,
+      integrity_status: 'PENDING',
+    });
+
+    try {
+      appendAuditEntry(caseId, 'evidence_uploaded', uploadedBy, 'user', `Created folder: ${newFolder.name}`);
+    } catch (e) {
+      console.warn("Failed to log audit for folder creation", e);
+    }
+  };
+
   const deleteFile = (fileId: string) => {
     setFiles(prev => prev.filter(f => f.id !== fileId));
     setEvidenceRecords(prev => prev.filter(r => r.file_id !== fileId));
+    removeEvidenceFromCase(caseId, fileId);
   };
 
   const downloadFile = (fileName: string, clientHash?: string) => {
-    handleDownloadEvidence(fileName, clientHash);
+    const success = handleDownloadEvidence(fileName, clientHash);
+    if (success) {
+      appendAuditEntry(caseId, 'evidence_verified', uploadedBy, 'user', `Downloaded: ${fileName}`);
+    }
   };
 
   const getStatusBadge = (status?: string) => {
@@ -370,7 +442,10 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
               </div>
             </div>
             <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-lg font-semibold transition-colors">
+              <button
+                onClick={handleNewFolder}
+                className="flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-lg font-semibold transition-colors"
+              >
                 <FolderPlus className="w-4 h-4" />
                 New Folder
               </button>
@@ -461,7 +536,10 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
               <p className="text-zinc-400 font-semibold mb-2">No files yet</p>
               <p className="text-sm text-zinc-500 mb-4">Create a folder or drag and drop a file to get started.</p>
               <div className="flex gap-2 justify-center">
-                <button className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-lg font-semibold transition-colors">
+                <button
+                  onClick={handleNewFolder}
+                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-lg font-semibold transition-colors"
+                >
                   New Folder
                 </button>
                 <label className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-zinc-950 rounded-lg font-semibold transition-colors cursor-pointer">

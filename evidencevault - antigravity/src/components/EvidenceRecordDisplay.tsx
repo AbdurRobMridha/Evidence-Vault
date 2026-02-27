@@ -179,21 +179,6 @@ export default function EvidenceRecordDisplay({ records }: EvidenceRecordDisplay
                 >
                   {showReport === record.file_id ? 'Hide Report' : 'View Forensic Report'}
                 </button>
-                <button
-                  onClick={() => {
-                    const report = generateForensicReport(record);
-                    const blob = new Blob([report], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${record.file_id}-forensic-report.txt`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="bg-zinc-700 hover:bg-zinc-600 text-zinc-100 font-semibold rounded px-3 py-2 text-sm transition-colors"
-                >
-                  Download Report
-                </button>
               </div>
 
               {/* Forensic Report Display */}

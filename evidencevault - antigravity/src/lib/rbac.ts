@@ -2,9 +2,12 @@
 // Evidence Vault — Role-Based Access Control
 // ═══════════════════════════════════════════════
 
+// ─── Imports ──────────────────────────────────────────────────────────────────
+import { getManagedCaseById } from './caseStore';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type Role = 'admin' | 'investigator' | 'viewer';
+export type Role = 'admin' | 'investigator' | 'user' | 'viewer';
 
 export interface AppUser {
     id: string;
@@ -55,6 +58,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     viewer: [
         'view_assigned_cases',
     ],
+    user: [
+        'view_assigned_cases',
+    ],
 };
 
 // ─── Permission Guards ────────────────────────────────────────────────────────
@@ -65,7 +71,20 @@ export function hasPermission(role: Role, permission: Permission): boolean {
 
 export function canAccessCase(user: AppUser, caseId: string): boolean {
     if (user.role === 'admin') return true;
-    return user.assignedCases.includes(caseId);
+    if (user.assignedCases.includes(caseId)) return true;
+
+    // Check if user created this case or is assigned as investigator on it
+    try {
+        const mc = getManagedCaseById(caseId);
+        if (mc) {
+            if (mc.createdBy === user.id) return true;
+            if (mc.createdByEmail === user.email) return true;
+            if (mc.assignedInvestigators && mc.assignedInvestigators.includes(user.id)) return true;
+        }
+    } catch (err) {
+        console.error('Error checking case access:', err);
+    }
+    return false;
 }
 
 export function canUpdateStatus(user: AppUser, nextStatus: string): boolean {
@@ -82,12 +101,14 @@ export const ROLE_LABELS: Record<Role, string> = {
     admin: 'Authority',
     investigator: 'Investigator',
     viewer: 'Viewer',
+    user: 'General User',
 };
 
 export const ROLE_COLORS: Record<Role, { text: string; bg: string; border: string }> = {
     admin: { text: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
     investigator: { text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
     viewer: { text: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/30' },
+    user: { text: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/30' },
 };
 
 // ─── User Store (localStorage) ────────────────────────────────────────────────
@@ -95,7 +116,20 @@ export const ROLE_COLORS: Record<Role, { text: string; bg: string; border: strin
 const USERS_KEY = 'ev_users';
 
 export function getAllUsers(): AppUser[] {
-    try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
+    try {
+        const users: AppUser[] = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+        let modified = false;
+        users.forEach(u => {
+            if (u.email === 'victim@example.com' && u.role === 'investigator') {
+                u.role = 'user';
+                modified = true;
+            }
+        });
+        if (modified) {
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        }
+        return users;
+    }
     catch { return []; }
 }
 
@@ -153,6 +187,13 @@ export function getCurrentAppUser(): AppUser | null {
         const raw = localStorage.getItem('user');
         if (!raw) return null;
         const loginUser = JSON.parse(raw);
+
+        // Auto-patch corrupted session data from earlier builds
+        if (loginUser.email === 'victim@example.com' && loginUser.role === 'investigator') {
+            loginUser.role = 'user';
+            localStorage.setItem('user', JSON.stringify(loginUser));
+        }
+
         // First check the RBAC user store
         const appUser = getUserByEmail(loginUser.email);
         if (appUser) return appUser;
@@ -161,7 +202,7 @@ export function getCurrentAppUser(): AppUser | null {
             id: loginUser.uid || loginUser.id || `user-${Date.now()}`,
             name: loginUser.email?.split('@')[0] || 'User',
             email: loginUser.email,
-            role: loginUser.role === 'admin' ? 'admin' : 'investigator',
+            role: loginUser.role || (loginUser.email?.includes('authority') ? 'admin' : 'user'),
             assignedCases: [],
             createdAt: new Date().toISOString(),
         };
@@ -172,7 +213,19 @@ export function getCurrentAppUser(): AppUser | null {
 
 export function seedDemoUsers(): void {
     const existing = getAllUsers();
-    if (existing.length > 0) return; // already seeded
+
+    // Auto-patch: if users were already seeded with 'investigator' for the demo victim, fix it.
+    if (existing.length > 0) {
+        let needsSave = false;
+        existing.forEach(u => {
+            if (u.email === 'victim@example.com' && u.role === 'investigator') {
+                u.role = 'user';
+                needsSave = true;
+            }
+        });
+        if (needsSave) saveUsers(existing);
+        return; // already seeded
+    }
 
     const demoUsers: AppUser[] = [
         {
@@ -203,7 +256,7 @@ export function seedDemoUsers(): void {
             id: 'user-victim-001',
             name: 'Victim User',
             email: 'victim@example.com',
-            role: 'investigator',
+            role: 'user',
             assignedCases: [],
             createdAt: '2026-02-10T12:00:00Z',
         },

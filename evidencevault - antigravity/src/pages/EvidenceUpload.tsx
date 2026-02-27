@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, ShieldCheck, File, AlertCircle, Loader2, CheckCircle, TrendingUp } from 'lucide-react';
+import { Upload, ShieldCheck, File, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { createManagedCase } from '../lib/caseStore';
 import { appendAuditEntry } from '../lib/auditLog';
 import { getCurrentAppUser } from '../lib/rbac';
-
-interface AnalysisResult {
-  risk_score: number;
-  detected_threats: string[];
-  recommendations: string[];
-}
 
 interface UploadState {
   isUploading: boolean;
@@ -18,13 +12,6 @@ interface UploadState {
   fileSize: number;
   clientHash: string;
   uploadedAt: string;
-}
-
-interface AnalysisState {
-  isAnalyzing: boolean;
-  analysisComplete: boolean;
-  result: AnalysisResult | null;
-  error: string;
 }
 
 interface PreserveState {
@@ -49,14 +36,6 @@ export default function EvidenceUpload() {
     fileSize: 0,
     clientHash: '',
     uploadedAt: ''
-  });
-
-  // Analysis state (separate)
-  const [analysisState, setAnalysisState] = useState<AnalysisState>({
-    isAnalyzing: false,
-    analysisComplete: false,
-    result: null,
-    error: ''
   });
 
   // Preserve state (separate)
@@ -90,14 +69,6 @@ export default function EvidenceUpload() {
         fileSize: 0,
         clientHash: '',
         uploadedAt: ''
-      });
-
-      // Reset analysis state for new file
-      setAnalysisState({
-        isAnalyzing: false,
-        analysisComplete: false,
-        result: null,
-        error: ''
       });
     }
   };
@@ -165,93 +136,6 @@ export default function EvidenceUpload() {
       console.error('[Upload] Error:', err);
       setUploadState({ ...uploadState, isUploading: false });
       setGeneralError(err.message || 'Upload failed');
-    }
-  };
-
-  // ===== BUTTON 2: Analyze with AI =====
-  const handleAnalyze = async () => {
-    if (!uploadState.fileUploaded) {
-      setAnalysisState({
-        ...analysisState,
-        error: 'Please upload a file first'
-      });
-      return;
-    }
-
-    if (!title || !description) {
-      setAnalysisState({
-        ...analysisState,
-        error: 'Please enter title and description'
-      });
-      return;
-    }
-
-    setAnalysisState({
-      isAnalyzing: true,
-      analysisComplete: false,
-      result: null,
-      error: ''
-    });
-    setGeneralError('');
-
-    try {
-      console.log('[Analyze] Starting AI analysis...');
-
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description,
-          fileName: file?.name,
-          fileSize: file?.size,
-          fileType: file?.type
-        })
-      });
-
-      console.log('[Analyze] Response status:', res.status);
-
-      if (!res.ok) {
-        let errorMsg = `HTTP ${res.status}`;
-
-        if (res.status === 404) {
-          errorMsg = 'AI service endpoint not found. Check server configuration.';
-        } else if (res.status === 500) {
-          errorMsg = 'AI analysis failed. Check server logs and API key.';
-        }
-
-        try {
-          const errData = await res.json();
-          console.error('[Analyze] Error response:', errData);
-          errorMsg = errData.error || errorMsg;
-        } catch { }
-
-        throw new Error(errorMsg);
-      }
-
-      const data = await res.json();
-      console.log('[Analyze] Success:', data);
-
-      if (!data.success) {
-        throw new Error(data.error || 'AI analysis failed');
-      }
-
-      setAnalysisState({
-        isAnalyzing: false,
-        analysisComplete: true,
-        result: data.risk_analysis,
-        error: ''
-      });
-
-      console.log('[Analyze] Analysis complete ✓');
-    } catch (err: any) {
-      console.error('[Analyze] Error:', err);
-      setAnalysisState({
-        isAnalyzing: false,
-        analysisComplete: false,
-        result: null,
-        error: err.message || 'Analysis failed'
-      });
     }
   };
 
@@ -454,12 +338,6 @@ export default function EvidenceUpload() {
       clientHash: '',
       uploadedAt: ''
     });
-    setAnalysisState({
-      isAnalyzing: false,
-      analysisComplete: false,
-      result: null,
-      error: ''
-    });
     setPreserveState({
       isPreserving: false,
       showConfirm: false,
@@ -502,7 +380,7 @@ export default function EvidenceUpload() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Suspicious emails from unknown sender"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-colors"
-                disabled={uploadState.isUploading || preserveState.isPreserving || analysisState.isAnalyzing}
+                disabled={uploadState.isUploading || preserveState.isPreserving}
               />
             </div>
 
@@ -514,7 +392,7 @@ export default function EvidenceUpload() {
                 placeholder="Describe the context. Include relevant details about the evidence..."
                 rows={3}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-colors resize-none"
-                disabled={uploadState.isUploading || preserveState.isPreserving || analysisState.isAnalyzing}
+                disabled={uploadState.isUploading || preserveState.isPreserving}
               />
             </div>
           </div>
@@ -535,7 +413,7 @@ export default function EvidenceUpload() {
                 onChange={handleFileChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 accept=".pdf,.jpg,.jpeg,.png,.mp4,.zip,.doc,.docx,.xls,.xlsx,.txt,.wav,.mov"
-                disabled={uploadState.isUploading || preserveState.isPreserving || analysisState.isAnalyzing}
+                disabled={uploadState.isUploading || preserveState.isPreserving}
               />
 
               {file ? (
@@ -601,98 +479,14 @@ export default function EvidenceUpload() {
           )}
         </div>
 
-        {/* Section 3: Optional AI Analysis */}
-        {uploadState.fileUploaded && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-800 text-xs font-bold">3</span>
-              AI Analysis <span className="text-xs font-normal text-zinc-500 ml-2">(Optional)</span>
-            </h2>
 
-            {analysisState.error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-300 p-3 rounded-lg mb-4 flex items-start gap-2 text-sm">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{analysisState.error}</span>
-              </div>
-            )}
 
-            {analysisState.analysisComplete && analysisState.result ? (
-              <div className="space-y-4">
-                {/* Risk Score */}
-                <div className="bg-zinc-950 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-zinc-400">Risk Score</p>
-                    <span className="text-2xl font-bold text-zinc-100">{analysisState.result.risk_score}/10</span>
-                  </div>
-                  <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-full transition-all ${analysisState.result.risk_score >= 7
-                        ? 'bg-red-500'
-                        : analysisState.result.risk_score >= 4
-                          ? 'bg-yellow-500'
-                          : 'bg-green-500'
-                        }`}
-                      style={{ width: `${(analysisState.result.risk_score / 10) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Threats */}
-                {analysisState.result.detected_threats && analysisState.result.detected_threats.length > 0 && (
-                  <div className="bg-zinc-950 rounded-lg p-4">
-                    <p className="text-sm text-zinc-400 mb-2">Detected Threats</p>
-                    <div className="flex flex-wrap gap-2">
-                      {analysisState.result.detected_threats.map((threat, idx) => (
-                        <span key={idx} className="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-xs font-medium">
-                          {threat}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Recommendations */}
-                {analysisState.result.recommendations && analysisState.result.recommendations.length > 0 && (
-                  <div className="bg-zinc-950 rounded-lg p-4">
-                    <p className="text-sm text-zinc-400 mb-2">Recommendations</p>
-                    <ul className="space-y-2">
-                      {analysisState.result.recommendations.map((rec, idx) => (
-                        <li key={idx} className="text-sm text-zinc-300 flex items-start gap-2">
-                          <span className="text-emerald-400 font-bold mt-0.5">✓</span>
-                          {rec}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button
-                onClick={handleAnalyze}
-                disabled={!uploadState.fileUploaded || !title || !description || analysisState.isAnalyzing}
-                className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {analysisState.isAnalyzing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <TrendingUp className="w-5 h-5" />
-                    Run AI Analysis
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        )}
 
         {/* Section 4: Preserve Evidence */}
         {uploadState.fileUploaded && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-800 text-xs font-bold">4</span>
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-800 text-xs font-bold">3</span>
               Preserve Evidence
             </h2>
 
@@ -749,12 +543,7 @@ export default function EvidenceUpload() {
                   <span className="text-emerald-400">✓</span>
                   <span>Preserve integrity verification hash</span>
                 </li>
-                {analysisState.analysisComplete && (
-                  <li className="flex gap-2">
-                    <span className="text-emerald-400">✓</span>
-                    <span>Store AI threat analysis results</span>
-                  </li>
-                )}
+
                 <li className="flex gap-2">
                   <span className="text-emerald-400">✓</span>
                   <span>Create timestamped case record</span>
@@ -803,6 +592,6 @@ export default function EvidenceUpload() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }

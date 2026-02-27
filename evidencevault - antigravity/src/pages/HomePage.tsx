@@ -8,6 +8,7 @@ import {
     ShieldAlert, Timer, RefreshCw, Send, KeyRound
 } from 'lucide-react';
 import './HomePage.css';
+import AIOverviewSection from '../components/AIOverviewSection';
 
 // ─── Intersection Observer Hook ─────────────────────────────────────────────────
 function useRevealOnScroll() {
@@ -518,6 +519,9 @@ export default function HomePage({ user }: { user?: any }) {
                     </div>
                 </div>
             </Section>
+
+            {/* ═══════════════ AI OVERVIEW ═══════════════ */}
+            <AIOverviewSection isLoggedIn={isLoggedIn} />
 
             {/* ═══════════════ DEAD-MAN SWITCH SECTION ═══════════════ */}
             <DeadManSwitchSection />

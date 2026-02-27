@@ -23,7 +23,8 @@ export type AuditAction =
     | 'invitation_accepted'
     | 'tamper_detected'
     | 'integrity_verified'
-    | 'note_added';
+    | 'note_added'
+    | 'ai_analysis_completed';
 
 export interface AuditEntry {
     id: string;
@@ -81,6 +82,56 @@ export function getRecentAuditEntries(count: number = 50): AuditEntry[] {
     return getGlobalAuditLog().slice(0, count);
 }
 
+// ─── Delete / Clear ───────────────────────────────────────────────────────
+
+export function deleteAuditEntry(entryId: string): void {
+    const log = getGlobalAuditLog().filter(e => e.id !== entryId);
+    localStorage.setItem(GLOBAL_LOG_KEY, JSON.stringify(log));
+}
+
+export function clearAuditLog(): void {
+    localStorage.setItem(GLOBAL_LOG_KEY, '[]');
+}
+
+export function clearCaseAuditLog(caseId: string): void {
+    const log = getGlobalAuditLog().filter(e => e.caseId !== caseId);
+    localStorage.setItem(GLOBAL_LOG_KEY, JSON.stringify(log));
+}
+
+export function clearFilteredAuditLog(predicate: (e: AuditEntry) => boolean): void {
+    const log = getGlobalAuditLog().filter(e => !predicate(e));
+    localStorage.setItem(GLOBAL_LOG_KEY, JSON.stringify(log));
+}
+
+// ─── Statistics ──────────────────────────────────────────────────────────────
+
+export interface AuditStats {
+    total: number;
+    today: number;
+    emergencies: number;
+    deletions: number;
+    topActor: string | null;
+    uniqueActors: number;
+    uniqueCases: number;
+}
+
+export function getAuditStats(): AuditStats {
+    const log = getGlobalAuditLog();
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const actorCounts: Record<string, number> = {};
+    log.forEach(e => { actorCounts[e.actor] = (actorCounts[e.actor] || 0) + 1; });
+    const topActor = Object.keys(actorCounts).sort((a, b) => actorCounts[b] - actorCounts[a])[0] ?? null;
+    return {
+        total: log.length,
+        today: log.filter(e => e.timestamp.slice(0, 10) === todayStr).length,
+        emergencies: log.filter(e => e.action === 'emergency_release' || e.action === 'emergency_override').length,
+        deletions: log.filter(e => e.action === 'case_deleted').length,
+        topActor,
+        uniqueActors: new Set(log.map(e => e.actor)).size,
+        uniqueCases: new Set(log.map(e => e.caseId)).size,
+    };
+}
+
 // ─── Action Labels & Icons ────────────────────────────────────────────────────
 
 export const ACTION_LABELS: Record<AuditAction, string> = {
@@ -105,6 +156,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
     tamper_detected: 'Tamper Detected',
     integrity_verified: 'Integrity Verified',
     note_added: 'Note Added',
+    ai_analysis_completed: 'AI Analysis Completed',
 };
 
 export const ACTION_COLORS: Record<AuditAction, string> = {
@@ -129,6 +181,7 @@ export const ACTION_COLORS: Record<AuditAction, string> = {
     tamper_detected: 'text-red-400',
     integrity_verified: 'text-emerald-400',
     note_added: 'text-zinc-400',
+    ai_analysis_completed: 'text-purple-400',
 };
 
 // ─── Seed Demo Audit Entries ──────────────────────────────────────────────────

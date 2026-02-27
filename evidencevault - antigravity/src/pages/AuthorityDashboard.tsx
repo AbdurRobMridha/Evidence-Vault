@@ -4,7 +4,7 @@ import {
   Shield, Users, ClipboardList, FolderOpen, UserPlus,
   Lock, Unlock, AlertTriangle, Trash2, ChevronDown,
   ShieldCheck, ShieldAlert, MoreVertical, RefreshCw,
-  Fingerprint, FileText
+  Fingerprint, FileText, Radar, Siren
 } from 'lucide-react';
 
 // Lib
@@ -16,6 +16,9 @@ import {
 } from '../lib/caseStore';
 import { getGlobalAuditLog, seedDemoAuditLog, appendAuditEntry } from '../lib/auditLog';
 import { getPendingInvitations } from '../lib/inviteStore';
+import { getPendingRequests, getAllRequests, approveRequest, rejectRequest, seedDemoRequests, type InvestigatorRequest } from '../lib/investigatorRequests';
+import { getEvidenceCountForCase } from '../lib/evidenceStore';
+import { getAllScans, getAllAlerts, getUnreadAlertCount, getRiskColor, getRiskLabel, PLATFORM_CONFIG } from '../lib/socialMonitorStore';
 
 // Components
 import CaseOverviewMetrics from '../components/admin/CaseOverviewMetrics';
@@ -25,7 +28,7 @@ import AuditLogPanel from '../components/admin/AuditLogPanel';
 import InvestigatorManagement from '../components/admin/InvestigatorManagement';
 import InviteInvestigatorModal from '../components/admin/InviteInvestigatorModal';
 
-type TabId = 'overview' | 'investigators' | 'audit' | 'cases';
+type TabId = 'overview' | 'investigators' | 'audit' | 'cases' | 'requests' | 'social';
 
 export default function AuthorityDashboard() {
   const [tab, setTab] = useState<TabId>('overview');
@@ -38,6 +41,7 @@ export default function AuthorityDashboard() {
     seedDemoUsers();
     seedDemoCases();
     seedDemoAuditLog();
+    seedDemoRequests();
   }, []);
 
   const refresh = () => setRefreshKey(k => k + 1);
@@ -49,6 +53,8 @@ export default function AuthorityDashboard() {
   const users = getAllUsers();
   const auditLog = getGlobalAuditLog();
   const pendingInvites = getPendingInvitations();
+  const pendingRequests = getPendingRequests();
+  const allRequests = getAllRequests();
 
   // Handlers
   const handleStatusChange = (caseId: string, newStatus: CaseStatus) => {
@@ -106,6 +112,8 @@ export default function AuthorityDashboard() {
     { id: 'investigators', label: 'Investigators', icon: <Users className="w-4 h-4" />, count: users.filter(u => u.role !== 'admin').length },
     { id: 'audit', label: 'Audit Log', icon: <ClipboardList className="w-4 h-4" />, count: auditLog.length },
     { id: 'cases', label: 'All Cases', icon: <FileText className="w-4 h-4" />, count: cases.length },
+    { id: 'requests', label: 'Requests', icon: <UserPlus className="w-4 h-4" />, count: pendingRequests.length },
+    { id: 'social', label: 'Social Threats', icon: <Radar className="w-4 h-4" />, count: getUnreadAlertCount() || undefined },
   ];
 
   return (
@@ -143,8 +151,8 @@ export default function AuthorityDashboard() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === t.id
-                ? 'border-emerald-400 text-emerald-400'
-                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+              ? 'border-emerald-400 text-emerald-400'
+              : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
           >
             {t.icon}
@@ -214,10 +222,20 @@ export default function AuthorityDashboard() {
       {/* ─── TAB: AUDIT LOG ──────────────────────────── */}
       {tab === 'audit' && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zinc-200">Global Audit History</h3>
-          <AuditLogPanel entries={auditLog} />
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-zinc-200">Audit Log Management</h3>
+              <p className="text-sm text-zinc-500 mt-0.5">Complete immutable history of all system actions. Admins can filter, export, and prune entries.</p>
+            </div>
+            <button onClick={refresh}
+              className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 px-3 py-2 rounded-lg transition-colors font-medium">
+              <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            </button>
+          </div>
+          <AuditLogPanel entries={auditLog} onRefresh={refresh} />
         </div>
       )}
+
 
       {/* ─── TAB: ALL CASES ──────────────────────────── */}
       {tab === 'cases' && (
@@ -282,7 +300,9 @@ export default function AuthorityDashboard() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs text-zinc-400">{c.assignedInvestigators.length} assigned</span>
+                        <span className="text-xs text-zinc-400">
+                          {c.assignedInvestigators.length} assigned · {getEvidenceCountForCase(c.caseId)} evidence
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -360,6 +380,205 @@ export default function AuthorityDashboard() {
                             </div>
                           )}
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── TAB: SOCIAL THREATS ─────────────────────── */}
+      {tab === 'social' && (() => {
+        const scans = getAllScans();
+        const unreadAlerts = getAllAlerts().filter(a => !a.read);
+        const highRiskScans = scans.filter(s => s.riskLevel >= 7);
+        return (
+          <div className="space-y-6">
+            {/* Social Monitor Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Scans', value: scans.length, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+                { label: 'High-Risk Convos', value: highRiskScans.length, color: 'text-red-400', bg: 'bg-red-500/10' },
+                { label: 'Auto-Cases Created', value: scans.filter(s => s.autoCaseCreated).length, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+                { label: 'Unread Alerts', value: unreadAlerts.length, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+              ].map((stat, i) => (
+                <div key={i} className={`${stat.bg} border border-zinc-800 rounded-xl p-4`}>
+                  <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
+                  <p className="text-xs font-semibold text-zinc-400 mt-1">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* DMS Fired Alert */}
+            {scans.filter(s => s.dmsFired && !s.userMarkedSafe).length > 0 && (
+              <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                <Siren className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-red-300">Dead Man's Switch Fired</p>
+                  <p className="text-sm text-red-400/80">{scans.filter(s => s.dmsFired && !s.userMarkedSafe).length} emergency report(s) were automatically sent to trusted contacts.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Scans Table */}
+            <div>
+              <h3 className="text-lg font-semibold text-zinc-200 mb-4">All Scanned Conversations</h3>
+              {scans.length === 0 ? (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center text-zinc-500">
+                  No conversations scanned yet. Run a scan from Social Monitor.
+                </div>
+              ) : (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider">
+                        <th className="text-left px-4 py-3 font-medium">Contact</th>
+                        <th className="text-left px-4 py-3 font-medium">Platform</th>
+                        <th className="text-left px-4 py-3 font-medium">Risk</th>
+                        <th className="text-left px-4 py-3 font-medium">Threats</th>
+                        <th className="text-left px-4 py-3 font-medium">Case ID</th>
+                        <th className="text-left px-4 py-3 font-medium">Status</th>
+                        <th className="text-left px-4 py-3 font-medium">Scanned</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...scans].sort((a, b) => b.riskLevel - a.riskLevel).map(scan => {
+                        const colors = getRiskColor(scan.riskLevel);
+                        const cfg = PLATFORM_CONFIG[scan.platform];
+                        return (
+                          <tr key={scan.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td className="px-4 py-3">
+                              <p className="text-zinc-200 font-medium">{scan.contactName}</p>
+                              <p className="text-xs text-zinc-500 font-mono">{scan.contactHandle}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="flex items-center gap-1.5 text-zinc-300">
+                                {cfg.icon} {scan.platform}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${colors.text} ${colors.bg} ${colors.border}`}>
+                                {scan.riskLevel}/10 {getRiskLabel(scan.riskLevel)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1">
+                                {scan.detectedThreats.slice(0, 2).map((t, i) => (
+                                  <span key={i} className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded">{t}</span>
+                                ))}
+                                {scan.detectedThreats.length > 2 && (
+                                  <span className="text-xs text-zinc-500">+{scan.detectedThreats.length - 2} more</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              {scan.autoCaseCreated && scan.autoCaseId ? (
+                                <Link to={`/cases/${scan.autoCaseId}`} className="text-xs text-purple-400 hover:text-purple-300 font-mono transition-colors">
+                                  {scan.autoCaseId.slice(0, 20)}…
+                                </Link>
+                              ) : (
+                                <span className="text-xs text-zinc-600">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {scan.dmsFired && !scan.userMarkedSafe && (
+                                <span className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">
+                                  <Siren className="w-3 h-3" /> DMS Fired
+                                </span>
+                              )}
+                              {scan.userMarkedSafe && (
+                                <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full w-fit">Safe</span>
+                              )}
+                              {!scan.dmsFired && !scan.userMarkedSafe && scan.dmsTriggerAt && (
+                                <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full w-fit">DMS Armed</span>
+                              )}
+                              {!scan.dmsFired && !scan.userMarkedSafe && !scan.dmsTriggerAt && (
+                                <span className="text-xs text-zinc-500">No DMS</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-zinc-500">
+                              {new Date(scan.scannedAt).toLocaleString()}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ─── TAB: REQUESTS ──────────────────────────── */}
+      {tab === 'requests' && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-zinc-200">Investigator Access Requests</h3>
+
+          {allRequests.length === 0 ? (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center text-zinc-500">
+              No requests yet.
+            </div>
+          ) : (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider">
+                    <th className="text-left px-4 py-3 font-medium">Name</th>
+                    <th className="text-left px-4 py-3 font-medium">Email</th>
+                    <th className="text-left px-4 py-3 font-medium">Case</th>
+                    <th className="text-left px-4 py-3 font-medium">Message</th>
+                    <th className="text-left px-4 py-3 font-medium">Status</th>
+                    <th className="text-right px-4 py-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allRequests.map(req => (
+                    <tr key={req.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                      <td className="px-4 py-3 text-zinc-200 font-medium">{req.name}</td>
+                      <td className="px-4 py-3 text-zinc-400 text-xs font-mono">{req.email}</td>
+                      <td className="px-4 py-3 text-xs text-zinc-500 font-mono">{req.requestedCaseId || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-zinc-400 max-w-xs truncate">{req.message}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${req.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                          req.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            'bg-red-500/10 text-red-400 border border-red-500/20'
+                          }`}>
+                          {req.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {req.status === 'pending' && (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                approveRequest(req.id, currentUser?.email || 'admin', 'investigator');
+                                appendAuditEntry(req.requestedCaseId || 'system', 'investigator_assigned', currentUser?.email || 'admin', 'admin', `Approved request from ${req.email}`);
+                                refresh();
+                              }}
+                              className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => {
+                                rejectRequest(req.id, currentUser?.email || 'admin');
+                                appendAuditEntry(req.requestedCaseId || 'system', 'investigator_removed', currentUser?.email || 'admin', 'admin', `Rejected request from ${req.email}`);
+                                refresh();
+                              }}
+                              className="text-xs font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                        {req.status !== 'pending' && (
+                          <span className="text-xs text-zinc-500">Resolved</span>
+                        )}
                       </td>
                     </tr>
                   ))}

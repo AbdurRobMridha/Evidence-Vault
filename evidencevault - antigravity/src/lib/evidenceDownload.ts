@@ -6,6 +6,7 @@
  */
 
 import JSZip from 'jszip';
+import { getEvidenceForCase } from './evidenceStore';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -83,6 +84,26 @@ function findByHash(hash: string): StoredEvidence | null {
 function findByName(fileName: string): StoredEvidence | null {
     if (!fileName) return null;
     return getAllStoredEvidence().find((e) => e.name === fileName) || null;
+}
+
+/**
+ * Find a stored evidence entry directly by its localStorage storageKey.
+ * This is the most reliable lookup because the storageKey is the exact
+ * pointer to where the raw file data was stored at upload time.
+ */
+function findByStorageKey(storageKey: string): StoredEvidence | null {
+    if (!storageKey) return null;
+    try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.name && parsed.data) {
+            return parsed as StoredEvidence;
+        }
+    } catch {
+        // corrupt entry
+    }
+    return null;
 }
 
 // ─── Base64 → Blob Conversion ──────────────────────────────────────────────────
@@ -257,15 +278,39 @@ export async function exportCaseAsZip(
     const evidenceMetadata: any[] = [];
 
     if (caseData.evidence && caseData.evidence.length > 0) {
+        // Load the per-case evidence metadata from localStorage so we can use
+        // the storageKey field, which is the direct pointer to the file data.
+        const localMeta = getEvidenceForCase(caseId);
+
         for (let i = 0; i < caseData.evidence.length; i++) {
             const ev = caseData.evidence[i];
             const fileName = ev.file_name || `evidence_${i + 1}`;
             const hash = ev.client_sha256 || '';
 
-            // Try to find file data in localStorage
+            // Build a quick lookup map: file_name -> storageKey from local metadata
+            const metaEntry = localMeta.find(
+                (m) =>
+                    m.file_name === fileName ||
+                    (hash && m.client_sha256 && m.client_sha256.toLowerCase() === hash.toLowerCase())
+            );
+
+            // Priority order:
+            //   1. storageKey  — direct pointer saved at upload time (most reliable)
+            //   2. hash        — SHA-256 scan across all evidence_* keys
+            //   3. name        — filename scan (least reliable, can collide)
             let stored: StoredEvidence | null = null;
-            if (hash) stored = findByHash(hash);
-            if (!stored) stored = findByName(fileName);
+            if (metaEntry?.storageKey) {
+                stored = findByStorageKey(metaEntry.storageKey);
+                if (stored) console.log(`[ZIP Export] Found by storageKey: ${fileName}`);
+            }
+            if (!stored && hash) {
+                stored = findByHash(hash);
+                if (stored) console.log(`[ZIP Export] Found by hash: ${fileName}`);
+            }
+            if (!stored) {
+                stored = findByName(fileName);
+                if (stored) console.log(`[ZIP Export] Found by name: ${fileName}`);
+            }
 
             if (stored && stored.data && typeof stored.data === 'string') {
                 const converted = base64ToUint8Array(stored.data);
@@ -294,8 +339,74 @@ export async function exportCaseAsZip(
 
             report(15 + ((i + 1) / caseData.evidence.length) * 30);
         }
+    } else {
+        // ── Fallback: files uploaded via CaseDetailsDashboard (localStorage only) ──
+        // These uploads bypass the server API, so caseData.evidence from the DB is
+        // empty. We pull from the per-case localStorage evidence store instead.
+        console.log(`[ZIP Export] API returned 0 evidence — using localStorage fallback for case ${caseId}.`);
+        const fallbackMeta = getEvidenceForCase(caseId);
+
+        for (let i = 0; i < fallbackMeta.length; i++) {
+            const meta = fallbackMeta[i];
+            const fileName = meta.file_name || `evidence_${i + 1}`;
+            const hash = meta.client_sha256 || '';
+
+            // Priority: storageKey (direct) → hash → name
+            let stored: StoredEvidence | null = null;
+            if (meta.storageKey) {
+                stored = findByStorageKey(meta.storageKey);
+                if (stored) console.log(`[ZIP Export] ✓ (local) Found by storageKey: ${fileName}`);
+            }
+            if (!stored && hash) {
+                stored = findByHash(hash);
+                if (stored) console.log(`[ZIP Export] ✓ (local) Found by hash: ${fileName}`);
+            }
+            if (!stored) {
+                stored = findByName(fileName);
+                if (stored) console.log(`[ZIP Export] ✓ (local) Found by name: ${fileName}`);
+            }
+
+            if (stored && stored.data && typeof stored.data === 'string') {
+                const converted = base64ToUint8Array(stored.data);
+                if (converted) {
+                    evidenceFolder!.file(fileName, converted.bytes);
+                    hashLines.push(`SHA-256: ${hash || 'N/A'}  ${fileName}  (${converted.bytes.length} bytes) — INCLUDED`);
+                } else {
+                    hashLines.push(`SHA-256: ${hash || 'N/A'}  ${fileName}  — ERROR: Could not decode file data`);
+                }
+            } else {
+                console.warn(`[ZIP Export] ✗ File data not found in localStorage: ${fileName}`);
+                hashLines.push(`SHA-256: ${hash || 'N/A'}  ${fileName}  — NOT AVAILABLE (file data not in browser storage)`);
+            }
+
+            evidenceMetadata.push({
+                id: meta.id,
+                file_name: meta.file_name,
+                file_type: meta.file_type,
+                file_size: meta.file_size,
+                client_sha256: meta.client_sha256,
+                server_sha256: meta.server_sha256,
+                upload_timestamp: meta.upload_timestamp,
+                uploaded_by: meta.uploaded_by,
+                integrity_verified: meta.integrity_status === 'VERIFIED',
+            });
+
+            // Patch caseData.evidence so forensic report and metadata sections
+            // list these files (they are not null-safe without this patch).
+            (caseData.evidence as any[]).push({
+                id: meta.id,
+                file_name: meta.file_name,
+                file_type: meta.file_type,
+                file_size: meta.file_size,
+                client_sha256: meta.client_sha256,
+                server_sha256: meta.server_sha256,
+                upload_timestamp: meta.upload_timestamp,
+                user_id: meta.uploaded_by,
+            });
+
+            report(15 + ((i + 1) / Math.max(fallbackMeta.length, 1)) * 30);
+        }
     }
-    report(45);
 
     // 3. Report folder — forensic report TXT
     const reportFolder = zip.folder(`${rootFolder}/Report`);

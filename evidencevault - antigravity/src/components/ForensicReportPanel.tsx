@@ -14,6 +14,9 @@ import {
     downloadText,
     downloadBlob,
 } from '../lib/ForensicReportGenerator';
+import { getManagedCaseById } from '../lib/caseStore';
+import { getEvidenceForCase } from '../lib/evidenceStore';
+import { getCaseAuditLog } from '../lib/auditLog';
 
 interface ForensicReportPanelProps {
     caseId: string;
@@ -33,8 +36,56 @@ export default function ForensicReportPanel({ caseId, userId, userEmail }: Foren
     const [showPreview, setShowPreview] = useState(false);
     const [previewContent, setPreviewContent] = useState('');
 
-    // Build report data from the API
+    // Build report data from localStorage first, fallback to API
     const fetchReportData = useCallback(async (): Promise<ForensicReportData> => {
+        // ── 1) Try localStorage (caseStore + evidenceStore + auditLog) ──
+        const mc = getManagedCaseById(caseId);
+        const storedEvidence = getEvidenceForCase(caseId);
+        const auditEntries = getCaseAuditLog(caseId);
+
+        if (mc) {
+            // Map evidence from evidenceStore
+            const evidence: ReportEvidence[] = storedEvidence.map(ev => ({
+                id: ev.id,
+                file_name: ev.file_name,
+                file_type: ev.file_type,
+                file_size: ev.file_size,
+                client_sha256: ev.client_sha256,
+                server_sha256: ev.server_sha256,
+                hash_match: ev.client_sha256 === ev.server_sha256 && ev.client_sha256 !== '',
+                upload_timestamp: ev.upload_timestamp,
+                uploaded_by: ev.uploaded_by,
+                device_info: `Platform: ${navigator.platform}`,
+                integrity_status: ev.integrity_status,
+            }));
+
+            // Map audit log
+            const audit_log: ReportAuditEntry[] = auditEntries.map(entry => ({
+                action: entry.action,
+                performed_by: entry.actor,
+                timestamp: entry.timestamp,
+                event_id: entry.id,
+                integrity_status: entry.action.includes('verified') ? 'VERIFIED' : 'N/A',
+                details: entry.detail,
+            }));
+
+            return {
+                case_id: caseId,
+                case_title: mc.title || `Case #${caseId}`,
+                case_description: mc.description || '',
+                case_status: mc.status,
+                case_created_at: mc.createdAt,
+                user_id: userId,
+                user_email: userEmail,
+                evidence,
+                audit_log,
+                ai_analysis: null,
+                investigator_notes: investigatorNotes || undefined,
+                report_version: generationCount + 1,
+            };
+        }
+
+        // ── 2) Fallback to API ──
         const res = await fetch(`/api/cases/${caseId}`);
         if (!res.ok) throw new Error('Failed to load case data');
         const caseInfo = await res.json();
@@ -96,7 +147,7 @@ export default function ForensicReportPanel({ caseId, userId, userEmail }: Foren
 
         return {
             case_id: caseId,
-            case_title: caseInfo.title || 'Untitled Case',
+            case_title: caseInfo.title || `Case #${caseId}`,
             case_description: caseInfo.description || '',
             case_status: caseInfo.status || 'open',
             case_created_at: caseInfo.created_at || new Date().toISOString(),

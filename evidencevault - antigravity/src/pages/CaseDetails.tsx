@@ -25,11 +25,8 @@ export default function CaseDetails() {
     const currentUser = getCurrentAppUser();
     setUser(currentUser);
 
-    // Access check
-    if (currentUser && id && !canAccessCase(currentUser, id)) {
-      navigate('/unauthorized', { replace: true });
-      return;
-    }
+    // Removed premature access check here.
+    // Access is now checked in render after data loads.
 
     // Try managed case store first
     if (id) {
@@ -96,11 +93,43 @@ export default function CaseDetails() {
     appendAuditEntry(id, newLocked ? 'case_locked' : 'case_unlocked', user?.email || 'unknown', user?.role || 'unknown', newLocked ? 'Case locked' : 'Case unlocked');
   };
 
-  if (loading) return <div className="p-8 text-zinc-500 animate-pulse">Loading case details...</div>;
+  if (loading) return (
+    <div className="p-8 flex items-center justify-center min-h-[400px]">
+      <div className="flex flex-col items-center gap-3 text-zinc-500 animate-pulse">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+        <p>Verifying access and loading case details...</p>
+      </div>
+    </div>
+  );
+
   if (!caseData) return <div className="p-8 text-red-400">Case not found</div>;
 
+  // Strict RBAC check AFTER case is loaded (per Part 1 instructions)
+  const isCreatorIdMatch = managedCase?.createdBy === user?.id || caseData.user_id === user?.id;
+  const isAssigned = managedCase?.assignedInvestigators?.includes(user?.id || '');
   const isAdmin = user?.role === 'admin';
   const isInvestigator = user?.role === 'investigator';
+
+  if (!isAdmin && !isCreatorIdMatch && !isAssigned) {
+    // If we get here, they are not admin, not the creator, and not an assigned investigator.
+    // They cannot view this case.
+    return (
+      <div className="p-8 max-w-7xl mx-auto mt-10">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-8 text-center max-w-md mx-auto">
+          <ShieldAlert className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-red-400 mb-2">Access Denied</h2>
+          <p className="text-red-300/80 mb-6">
+            You do not have permission to view this resource.
+            This case belongs to another user.
+          </p>
+          <button onClick={() => navigate('/dashboard')} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium px-4 py-2 rounded-lg transition-colors">
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const canDelete = isAdmin;
   const canLock = isAdmin;
   const canChangeStatus = isAdmin || isInvestigator;

@@ -287,29 +287,96 @@ app.get('/api/admin/cases', (req, res) => {
   res.json(cases);
 });
 
+// ── Server-side local fallback analyzer ──────────────────────────────────────
+function serverLocalAnalysis(title: string, description: string, fileName?: string, fileSize?: number, fileType?: string) {
+  const SUSPICIOUS_KW = [
+    'confidential', 'leak', 'password', 'internal', 'classified', 'secret',
+    'hack', 'exploit', 'malware', 'phishing', 'threat', 'attack', 'breach',
+    'stolen', 'unauthorized', 'illegal', 'fraud', 'blackmail', 'extortion',
+    'stalking', 'harassment', 'abuse', 'spy', 'surveillance', 'ransom',
+    'keylogger', 'trojan', 'virus', 'spyware', 'rootkit', 'backdoor',
+    'credential', 'dump', 'exfiltrate', 'injection', 'vulnerability',
+  ];
+  const HIGH_EXT = ['.exe', '.bat', '.cmd', '.scr', '.msi', '.ps1', '.vbs', '.js', '.wsf'];
+  const MED_EXT = ['.zip', '.rar', '.7z', '.tar', '.gz', '.iso', '.dmg'];
+
+  const combined = `${title} ${description} ${fileName || ''}`.toLowerCase();
+  const ext = fileName ? (fileName.lastIndexOf('.') >= 0 ? fileName.substring(fileName.lastIndexOf('.')).toLowerCase() : '') : '';
+
+  let score = 2;
+  const threats: string[] = [];
+  const recommendations: string[] = [];
+
+  // File type
+  if (HIGH_EXT.includes(ext)) { score += 4; threats.push(`High-risk file type: ${ext}`); }
+  else if (MED_EXT.includes(ext)) { score += 2; threats.push(`Archive format: ${ext}`); }
+
+  // Keywords
+  const found = SUSPICIOUS_KW.filter(kw => combined.includes(kw));
+  if (found.length > 0) { score += Math.min(4, found.length); threats.push(`Suspicious keywords: ${found.join(', ')}`); }
+
+  // Size
+  if (fileSize && fileSize > 100 * 1024 * 1024) { score += 1; threats.push(`Unusually large file: ${(fileSize / 1024 / 1024).toFixed(1)} MB`); }
+
+  score = Math.max(1, Math.min(10, score));
+
+  // Recommendations
+  recommendations.push('Preserve evidence immediately');
+  if (score >= 7) {
+    recommendations.push('Escalate to authority');
+    recommendations.push('Restrict case access');
+    recommendations.push('Conduct deep forensic scan');
+  } else if (score >= 4) {
+    recommendations.push('Assign investigator for review');
+    recommendations.push('Verify metadata authenticity');
+  } else {
+    recommendations.push('Log in chain-of-custody records');
+    recommendations.push('Generate standard forensic report');
+  }
+
+  return {
+    risk_score: score,
+    detected_threats: threats,
+    recommendations,
+    summary: `Analysis of "${title}" yielded a risk score of ${score}/10. ${threats.length} indicator(s) detected.`,
+    analysisSource: 'local-fallback',
+  };
+}
+
 // NEW: AI Analysis endpoint (STEP 1: analyze only, no case creation)
+// This endpoint NEVER returns a 500 error — always produces meaningful output.
 app.post('/api/analyze', express.json(), async (req, res) => {
-  const { title, description } = req.body;
+  const { title, description, fileName, fileSize, fileType } = req.body;
 
   if (!title || !description) {
     return res.status(400).json({ error: 'Title and description are required' });
   }
 
+  // Try Gemini AI first, fallback to local on ANY failure
   try {
-    console.log('Starting AI analysis for:', title);
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY not configured');
+    }
+
+    console.log('Starting Gemini AI analysis for:', title);
     const { risk_score, risk_analysis } = await performAIAnalysis(title, description);
 
-    // Return analysis result WITHOUT creating a case
     res.json({
       success: true,
       risk_score,
-      risk_analysis: JSON.parse(risk_analysis)
+      risk_analysis: JSON.parse(risk_analysis),
+      analysisSource: 'gemini-ai',
     });
   } catch (err: any) {
-    console.error('AI analysis endpoint error:', err);
-    res.status(500).json({
-      error: err.message || 'AI analysis failed',
-      details: 'Please check your Gemini API key and try again'
+    console.warn('[AI Analyze] Gemini failed, using local fallback:', err.message || err);
+
+    const localResult = serverLocalAnalysis(title, description, fileName, fileSize, fileType);
+
+    res.json({
+      success: true,
+      risk_score: localResult.risk_score,
+      risk_analysis: localResult,
+      analysisSource: 'local-fallback',
     });
   }
 });
@@ -1153,7 +1220,61 @@ setInterval(() => {
   });
 }, 60000); // Check every minute for demo
 
-// Vite middleware for development
+// ─── Social Monitor: DMS Fire Endpoint ───────────────────────────────────────
+app.post('/api/social-monitor/dms-fire', express.json(), async (req, res) => {
+  const { scanId, contactName, platform, riskLevel } = req.body || {};
+  try {
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(mockUserId) as any;
+    let trusted: any[] = [];
+    try { trusted = JSON.parse(user?.trusted_contacts || '[]'); } catch { trusted = []; }
+    const emails = trusted.map((c: any) => c.email).filter(Boolean);
+
+    const { transporter, from, isDemoMode } = await (async () => {
+      // reuse smart transporter logic inline
+      const realSmtp = !!(process.env.SMTP_USER && process.env.SMTP_PASS &&
+        process.env.SMTP_USER !== 'your-email@gmail.com' &&
+        process.env.SMTP_PASS !== 'your-gmail-app-password');
+      if (realSmtp) {
+        const t = nodemailer.createTransport({ host: process.env.SMTP_HOST || 'smtp.gmail.com', port: Number(process.env.SMTP_PORT) || 465, secure: true, auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } });
+        return { transporter: t, from: process.env.SMTP_USER!, isDemoMode: false };
+      }
+      const testAccount = await nodemailer.createTestAccount();
+      const t = nodemailer.createTransport({ host: 'smtp.ethereal.email', port: 587, secure: false, auth: { user: testAccount.user, pass: testAccount.pass } });
+      return { transporter: t, from: testAccount.user, isDemoMode: true };
+    })();
+
+    const to = emails.length > 0 ? emails : [from];
+    const info = await transporter.sendMail({
+      from: `"Evidence Vault" <${from}>`,
+      to: to.join(', '),
+      subject: `🚨 EMERGENCY: High-Risk Social Media Threat Detected (Risk ${riskLevel}/10)`,
+      html: `
+        <div style="background:#0a0a0a;color:#e5e5e5;font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
+          <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:24px;margin-bottom:24px;">
+            <h1 style="color:#ef4444;margin:0 0 8px;">🚨 Dead Man's Switch Activated</h1>
+            <p style="color:#fca5a5;margin:0;">Social Media Monitoring detected a critical threat and the user did not respond in time.</p>
+          </div>
+          <table style="width:100%;border-collapse:collapse;background:#18181b;border-radius:12px;overflow:hidden;">
+            <tr><td style="padding:12px 16px;color:#71717a;width:140px;">Platform</td><td style="padding:12px 16px;color:#e5e5e5;font-weight:600;">${platform}</td></tr>
+            <tr><td style="padding:12px 16px;color:#71717a;">Contact</td><td style="padding:12px 16px;color:#e5e5e5;">${contactName}</td></tr>
+            <tr><td style="padding:12px 16px;color:#71717a;">Risk Level</td><td style="padding:12px 16px;color:#ef4444;font-weight:700;">${riskLevel}/10 — CRITICAL</td></tr>
+            <tr><td style="padding:12px 16px;color:#71717a;">Triggered</td><td style="padding:12px 16px;color:#e5e5e5;">${new Date().toISOString()}</td></tr>
+          </table>
+          <p style="color:#71717a;font-size:12px;margin-top:24px;">This automated message was sent by Evidence Vault's Dead Man's Switch safety system.</p>
+        </div>`,
+    });
+
+    let previewUrl: string | false = false;
+    if (isDemoMode) previewUrl = nodemailer.getTestMessageUrl(info);
+    logAudit(null, mockUserId, 'emergency_release', `Social Monitor DMS fired: ${platform}/${contactName} risk=${riskLevel}. Preview: ${previewUrl || 'N/A'}`);
+    res.json({ success: true, isDemoMode, previewUrl });
+  } catch (e: any) {
+    console.error('[Social Monitor DMS]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+//Vite middleware for development
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
