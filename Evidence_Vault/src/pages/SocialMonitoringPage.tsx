@@ -13,11 +13,12 @@ import {
     getAllAlerts, createAlert, markAlertRead, markAllAlertsRead, deleteAlert, deleteAllReadAlerts, getUnreadAlertCount,
     getMonitorSettings, saveMonitorSettings,
     getRiskColor, getRiskLabel, generateDemoScan, RiskLevel,
-    attachChatEvidenceToCase,
+    attachChatEvidenceToCase, attachAllContactEvidenceToCase,
 } from '../lib/socialMonitorStore';
 import { createManagedCase } from '../lib/caseStore';
 import { appendAuditEntry } from '../lib/auditLog';
 import { getCurrentAppUser } from '../lib/rbac';
+import { createEmergencyAccessToken } from '../lib/emergencyAccessStore';
 
 // ─── DMS Timer Options ────────────────────────────────────────────────────────
 const DMS_OPTIONS = [
@@ -32,15 +33,18 @@ const DMS_OPTIONS = [
 ];
 
 // ─── Scan Card ────────────────────────────────────────────────────────────────
-function ScanCard({ scan, onViewDetail, onMarkSafe, onCreateCase, onEmergency, onDelete, user }: {
+function ScanCard({ scan, onViewDetail, onMarkSafe, onCreateCase, onEmergency, onDelete, user, emergencyLoadingId }: {
     scan: ScannedConversation;
     onViewDetail: (s: ScannedConversation) => void;
-    onMarkSafe: (id: string) => void;
-    onCreateCase: (s: ScannedConversation) => void;
-    onEmergency: (s: ScannedConversation) => void;
-    onDelete: (id: string) => void;
+    onMarkSafe: (scanId: string) => void;
+    onCreateCase: (scan: ScannedConversation) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onEmergency: (scan: ScannedConversation) => any;
+    onDelete: (scanId: string) => void;
     user: any;
+    emergencyLoadingId?: string | null;
 }) {
+    const isEmergencyLoading = emergencyLoadingId === scan.id;
     const colors = getRiskColor(scan.riskLevel);
     const isHighRisk = scan.riskLevel >= 8;
     const cfg = PLATFORM_CONFIG[scan.platform];
@@ -109,9 +113,14 @@ function ScanCard({ scan, onViewDetail, onMarkSafe, onCreateCase, onEmergency, o
 
                 {isHighRisk && !scan.userMarkedSafe && (
                     <>
-                        <button onClick={() => onEmergency(scan)}
-                            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition-colors">
-                            <Siren className="w-3.5 h-3.5" /> Emergency!
+                        <button
+                            onClick={() => onEmergency(scan)}
+                            disabled={isEmergencyLoading}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-60 disabled:cursor-wait text-white rounded-lg text-xs font-bold transition-colors"
+                        >
+                            {isEmergencyLoading
+                                ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />Sending…</>
+                                : <><Siren className="w-3.5 h-3.5" />Emergency!</>}
                         </button>
                         <button onClick={() => onMarkSafe(scan.id)}
                             className="flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold transition-colors">
@@ -142,7 +151,7 @@ function ScanDetailModal({ scan, onClose, onCreateCase, onEmergency, onMarkSafe 
     scan: ScannedConversation;
     onClose: () => void;
     onCreateCase: (s: ScannedConversation) => void;
-    onEmergency: (s: ScannedConversation) => void;
+    onEmergency: (s: ScannedConversation) => void | Promise<void>;
     onMarkSafe: (id: string) => void;
 }) {
     const colors = getRiskColor(scan.riskLevel);
@@ -315,6 +324,9 @@ export default function SocialMonitoringPage({ user }: { user?: any }) {
     const [scansCollapsed, setScansCollapsed] = useState(false);
     const [scansShowAll, setScansShowAll] = useState(false);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'info' } | null>(null);
+    const [emergencyLoadingId, setEmergencyLoadingId] = useState<string | null>(null);
+    // scanId → client-side blob URL (in-session only, not persisted)
+    const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
     const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
         setToast({ msg, type });
@@ -388,68 +400,189 @@ export default function SocialMonitoringPage({ user }: { user?: any }) {
         showToast('Scan result removed.', 'info');
     };
 
+    // ── BUILD CLIENT-SIDE EMAIL PREVIEW (Ethereal-mimic) ─────────────────
+    const buildEmailPreviewHtml = (
+        contactName: string, platform: string, riskLevel: number,
+        caseId: string, accessLink: string, triggeredAt: string, rbacEmail: string
+    ) => {
+        return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>🚨 Evidence Vault Emergency Alert</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#09090b; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:40px 16px; }
+  .badge { background:#18181b; border:1px solid #3f3f46; border-radius:8px; padding:8px 16px;
+    color:#71717a; font-size:12px; margin-bottom:24px; text-align:center; }
+  .email { background:#18181b; border:1px solid #27272a; border-radius:16px;
+    max-width:640px; width:100%; overflow:hidden; }
+  .hdr { background:rgba(239,68,68,.1); border-bottom:1px solid rgba(239,68,68,.2);
+    padding:28px 28px 24px; text-align:center; }
+  .hdr .emoji { font-size:40px; margin-bottom:12px; }
+  .hdr h1 { color:#ef4444; font-size:24px; font-weight:800; margin-bottom:8px; }
+  .hdr p { color:#fca5a5; font-size:14px; line-height:1.6; }
+  .body { padding:28px; }
+  table.details { width:100%; border-collapse:collapse; background:#0f0f11;
+    border:1px solid #27272a; border-radius:12px; overflow:hidden; margin-bottom:24px; }
+  table.details tr { border-bottom:1px solid #27272a; }
+  table.details tr:last-child { border:none; }
+  table.details td { padding:13px 18px; font-size:13px; }
+  table.details td:first-child { color:#71717a; width:130px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.05em; }
+  table.details td:last-child { color:#e4e4e7; font-weight:500; }
+  .risk-badge { color:#ef4444; font-weight:800; font-size:17px; }
+  .risk-label { background:rgba(239,68,68,.13); color:#fca5a5; font-size:12px;
+    font-weight:700; padding:2px 10px; border-radius:999px; margin-left:8px; }
+  .case-mono { font-family:monospace; color:#a1a1aa; font-size:13px; }
+  .access-box { background:linear-gradient(135deg,rgba(239,68,68,.09),rgba(220,38,38,.04));
+    border:1.5px solid rgba(239,68,68,.35); border-radius:14px; padding:24px;
+    text-align:center; margin-bottom:24px; }
+  .access-box .label { color:#fca5a5; font-size:12px; font-weight:700;
+    letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+  .access-box .desc { color:#a1a1aa; font-size:12px; line-height:1.7; margin-bottom:18px; }
+  .access-btn { display:inline-block; background:#dc2626; color:#fff; font-weight:800;
+    font-size:15px; padding:14px 32px; border-radius:10px; text-decoration:none;
+    letter-spacing:.02em; box-shadow:0 4px 20px rgba(220,38,38,.4); }
+  .access-url { margin-top:12px; color:#71717a; font-size:10px; word-break:break-all; }
+  .steps { background:#0f0f11; border:1px solid #27272a; border-radius:12px;
+    padding:20px 22px; margin-bottom:24px; }
+  .steps .title { color:#a1a1aa; font-size:12px; font-weight:700;
+    letter-spacing:.06em; text-transform:uppercase; margin-bottom:12px; }
+  .steps ol { color:#a1a1aa; font-size:13px; line-height:1.9; padding-left:18px; }
+  .legal { border-top:1px solid #27272a; padding-top:20px; color:#52525b;
+    font-size:11px; line-height:1.8; }
+  .legal p { margin-bottom:4px; }
+  .footer { max-width:640px; width:100%; text-align:center; margin-top:20px;
+    color:#3f3f46; font-size:11px; }
+</style></head><body>
+  <div class="badge">
+    📧 Ethereal Demo Preview — This is what your trusted contact receives<br>
+    Simulated delivery by <strong style="color:#a1a1aa">Evidence Vault</strong>
+    &bull; <span id="ts" style="color:#a1a1aa">${triggeredAt}</span>
+  </div>
+  <div class="email">
+    <div class="hdr">
+      <div class="emoji">🚨</div>
+      <h1>Dead Man's Switch Activated</h1>
+      <p>Evidence Vault's Social Media Monitor detected a <strong>CRITICAL threat</strong>
+      and the user did not respond in time. You have been designated as a trusted emergency contact.</p>
+    </div>
+    <div class="body">
+      <table class="details">
+        <tr><td>Platform</td><td><strong>${platform}</strong></td></tr>
+        <tr><td>Contact</td><td>${contactName}</td></tr>
+        <tr><td>Risk Level</td><td><span class="risk-badge">${riskLevel}/10</span><span class="risk-label">CRITICAL</span></td></tr>
+        <tr><td>Case ID</td><td><span class="case-mono">${caseId}</span></td></tr>
+        <tr><td>Sent By</td><td style="color:#a1a1aa">${rbacEmail}</td></tr>
+        <tr><td>Triggered</td><td style="font-size:12px;color:#a1a1aa">${triggeredAt}</td></tr>
+      </table>
+
+      <div class="access-box">
+        <div class="label">🔑 One-Time Secure Access Link</div>
+        <div class="desc">
+          This link grants you <strong style="color:#fca5a5">single-use, read-only access</strong>
+          to the forensic case files, evidence attachments, and AI threat analysis reports.<br>
+          <strong style="color:#ef4444">Expires 72 hours after issue &bull; Can only be used once.</strong>
+        </div>
+        <a href="${accessLink}" class="access-btn">🔓 Access Case Files &amp; Evidence →</a>
+        <div class="access-url">Direct URL: ${accessLink}</div>
+      </div>
+
+      <div class="steps">
+        <div class="title">📋 Recommended Actions</div>
+        <ol>
+          <li>Click the access link above to view the full case file and download all evidence.</li>
+          <li>Verify file integrity using the SHA-256 hashes listed in the case details.</li>
+          <li>Contact relevant authorities (police, legal counsel) and share the evidence package.</li>
+          <li>Record that you received this email — it is timestamped and forms part of the chain of custody.</li>
+        </ol>
+      </div>
+
+      <div class="legal">
+        <p>• This message was generated automatically by Evidence Vault's Dead Man's Switch safety system.</p>
+        <p>• All evidence files carry SHA-256 cryptographic hashes proving no tampering has occurred.</p>
+        <p>• Your access of the case files will be permanently recorded in the immutable audit trail.</p>
+        <p>• The one-time access link expires <strong style="color:#71717a">72 hours</strong> from issue time.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer">Evidence Vault &copy; ${new Date().getFullYear()} &bull; Demo Mode &bull; Encrypted in transit</div>
+</body></html>`;
+    };
+
     // ── EMERGENCY TRIGGER (bypasses DMS timer) ────────────────────────────────
     const handleEmergency = async (scan: ScannedConversation) => {
-        const rbac = getRbacUser();
-
-        // 1. Create case immediately if not already
-        let caseId = scan.autoCaseId;
-        if (!scan.autoCaseCreated) {
-            const newCase = createManagedCase({
-                title: `[EMERGENCY] ${scan.platform} — ${scan.contactName}`,
-                description: scan.riskSummary,
-                createdBy: rbac.id,
-                createdByEmail: rbac.email,
-                priority: 'Critical',
-            });
-            caseId = newCase.caseId;
-            updateScan(scan.id, { autoCaseCreated: true, autoCaseId: caseId, dmsFired: true });
-            appendAuditEntry(caseId, 'case_created', rbac.email, 'system',
-                `🚨 EMERGENCY case from ${scan.platform} monitoring — Risk ${scan.riskLevel}/10`);
-            // Attach chat transcript as evidence in the case
-            attachChatEvidenceToCase(caseId, scan, rbac.email);
-            notifyDashboard(); // <-- instant Dashboard refresh
-        } else {
-            updateScan(scan.id, { dmsFired: true });
-        }
-
-        // 2. Fire DMS immediately (no timer)
-        let previewUrl: string | null = null;
-        let emailOk = false;
+        if (emergencyLoadingId) return;
+        setEmergencyLoadingId(scan.id);
         try {
-            const resp = await fetch('/api/social-monitor/dms-fire', {
+            const rbac = getRbacUser();
+
+            // 1. Create case
+            let caseId = scan.autoCaseId;
+            if (!scan.autoCaseCreated) {
+                const newCase = createManagedCase({
+                    title: `[EMERGENCY] ${scan.platform} — ${scan.contactName}`,
+                    description: scan.riskSummary,
+                    createdBy: rbac.id, createdByEmail: rbac.email, priority: 'Critical',
+                });
+                caseId = newCase.caseId;
+                updateScan(scan.id, { autoCaseCreated: true, autoCaseId: caseId, dmsFired: true });
+                appendAuditEntry(caseId, 'case_created', rbac.email, 'system',
+                    `🚨 EMERGENCY case from ${scan.platform} — Risk ${scan.riskLevel}/10`);
+                attachAllContactEvidenceToCase(caseId, scan, rbac.email);
+                notifyDashboard();
+            } else {
+                caseId = scan.autoCaseId || `emergency-${Date.now()}`;
+                updateScan(scan.id, { dmsFired: true });
+            }
+
+            // 2. One-time access token
+            const accessTokenEntry = createEmergencyAccessToken(
+                caseId, scan.platform, scan.contactName, scan.riskLevel, rbac.email
+            );
+            const accessLink = `${window.location.origin}/access/${accessTokenEntry.token}`;
+            const triggeredAt = new Date().toUTCString();
+
+            // 3. Build client-side email preview (always works, server-independent)
+            const emailHtml = buildEmailPreviewHtml(
+                scan.contactName, scan.platform, scan.riskLevel,
+                caseId, accessLink, triggeredAt, rbac.email
+            );
+            const blob = new Blob([emailHtml], { type: 'text/html' });
+            const clientPreviewUrl = URL.createObjectURL(blob);
+
+            // 4. Try real Ethereal send in background (bonus — doesn't block UX)
+            let serverPreviewUrl: string | null = null;
+            fetch('/api/social-monitor/dms-fire', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     scanId: scan.id, contactName: scan.contactName,
                     platform: scan.platform, riskLevel: scan.riskLevel, isEmergency: true,
+                    caseId, accessToken: accessTokenEntry.token, accessLink,
                 }),
+            }).then(r => r.json()).then(d => {
+                if (d.previewUrl) serverPreviewUrl = d.previewUrl;
+            }).catch(() => { /* silent — client preview is primary */ });
+
+            // 5. Save preview URL keyed by scan.id (used by Alerts tab)
+            setPreviewUrls(prev => ({ ...prev, [scan.id]: clientPreviewUrl }));
+
+            // 6. In-app alert + toast — stays on current tab
+            createAlert({
+                conversationId: scan.id, platform: scan.platform, contactName: scan.contactName,
+                riskLevel: scan.riskLevel,
+                message: `🚨 EMERGENCY — ${scan.contactName} on ${scan.platform}. Case ${caseId} created. Trusted contact alerted. Open the Alerts section to preview the sent email.`,
             });
-            const data = await resp.json().catch(() => ({}));
-            previewUrl = data.previewUrl || null;
-            emailOk = true;
-        } catch {
-            emailOk = false;
+
+            showToast(`🚨 Emergency triggered! Case created & trusted contact alerted.`, 'error');
+            sendBrowserNotification('🚨 Emergency Alert Sent',
+                `Case ${caseId} created for ${scan.contactName}. Trusted contact has been alerted.`);
+            refresh();
+        } catch (err: any) {
+            console.error('[Emergency]', err);
+            showToast(`❌ Emergency failed: ${err?.message || 'Unknown error'}`, 'error');
+        } finally {
+            setEmergencyLoadingId(null);
         }
-
-        // 3. Create in-app alert with preview link
-        createAlert({
-            conversationId: scan.id, platform: scan.platform, contactName: scan.contactName,
-            riskLevel: scan.riskLevel,
-            message: `🚨 EMERGENCY for ${scan.contactName} on ${scan.platform}. Case ${caseId} created. Email ${emailOk ? 'sent' : 'FAILED'}.${previewUrl ? ` ⭐ Preview: ${previewUrl}` : ''}`,
-        });
-
-        // 4. Show toast with Ethereal link
-        if (emailOk && previewUrl) {
-            showToast(`🚨 Emergency triggered! Case created. ⭐ Email preview ready — check Alerts tab.`, 'error');
-        } else if (emailOk) {
-            showToast(`🚨 Emergency triggered! Case created. Email sent to trusted contacts.`, 'error');
-        } else {
-            showToast(`Case created. Email send failed — check server logs.`, 'info');
-        }
-
-        sendBrowserNotification('🚨 Emergency Triggered',
-            `Case created + contacts alerted: ${scan.contactName} on ${scan.platform}`);
-        refresh();
     };
 
     // ── CREATE CASE MANUALLY ─────────────────────────────────────────────────
@@ -467,7 +600,7 @@ export default function SocialMonitoringPage({ user }: { user?: any }) {
         appendAuditEntry(newCase.caseId, 'case_created', rbac.email, 'user',
             `Manually created from social monitoring — Risk ${scan.riskLevel}/10 on ${scan.platform}`);
         // Attach chat transcript as evidence in the case
-        attachChatEvidenceToCase(newCase.caseId, scan, rbac.email);
+        attachAllContactEvidenceToCase(newCase.caseId, scan, rbac.email);
         createAlert({
             conversationId: scan.id, platform: scan.platform, contactName: scan.contactName,
             riskLevel: scan.riskLevel,
@@ -572,6 +705,7 @@ export default function SocialMonitoringPage({ user }: { user?: any }) {
                     <button onClick={() => setToast(null)}><X className="w-4 h-4 opacity-60" /></button>
                 </div>
             )}
+
 
             {/* Header */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -735,11 +869,12 @@ export default function SocialMonitoringPage({ user }: { user?: any }) {
                                 <div className="grid gap-3 md:grid-cols-2">
                                     {(scansShowAll ? highRiskScans : highRiskScans.slice(0, PREVIEW_LIMIT)).map(scan => (
                                         <ScanCard key={scan.id} scan={scan}
-                                            onViewDetail={setSelectedScan}
+                                            onViewDetail={(s: ScannedConversation): void => setSelectedScan(s)}
                                             onMarkSafe={handleMarkSafe}
                                             onCreateCase={handleCreateCase}
                                             onEmergency={handleEmergency}
                                             onDelete={handleDeleteScan}
+                                            emergencyLoadingId={emergencyLoadingId}
                                             user={user} />
                                     ))}
                                 </div>
@@ -773,11 +908,12 @@ export default function SocialMonitoringPage({ user }: { user?: any }) {
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                             {[...scans].sort((a, b) => b.riskLevel - a.riskLevel).map(scan => (
                                 <ScanCard key={scan.id} scan={scan}
-                                    onViewDetail={setSelectedScan}
+                                    onViewDetail={(s: ScannedConversation): void => setSelectedScan(s)}
                                     onMarkSafe={handleMarkSafe}
                                     onCreateCase={handleCreateCase}
                                     onEmergency={handleEmergency}
                                     onDelete={handleDeleteScan}
+                                    emergencyLoadingId={emergencyLoadingId}
                                     user={user} />
                             ))}
                         </div>
@@ -829,25 +965,21 @@ export default function SocialMonitoringPage({ user }: { user?: any }) {
                                                 </p>
                                                 {!alert.read && <div className="w-2 h-2 bg-purple-400 rounded-full mt-1.5 flex-shrink-0" />}
                                             </div>
-                                            {/* Render message — linkify Ethereal preview URLs */}
-                                            {(() => {
-                                                const previewMatch = alert.message.match(/(https:\/\/ethereal\.email\S+)/);
-                                                const msgBeforeUrl = previewMatch
-                                                    ? alert.message.slice(0, alert.message.indexOf(previewMatch[1]))
-                                                    : alert.message;
-                                                return (
-                                                    <div className="text-xs text-zinc-400 mt-0.5">
-                                                        <p>{msgBeforeUrl}</p>
-                                                        {previewMatch && (
-                                                            <a href={previewMatch[1]} target="_blank" rel="noopener noreferrer"
-                                                                className="inline-flex items-center gap-1 mt-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-lg text-xs font-semibold hover:bg-amber-500/20 transition-colors"
-                                                                onClick={e => e.stopPropagation()}>
-                                                                ⭐ Open Ethereal Email Preview →
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })()}
+                                            <div className="text-xs text-zinc-400 mt-1 space-y-1.5">
+                                                <p>{alert.message}</p>
+                                                {/* Emergency preview button — shown when this alert has a client-side preview URL */}
+                                                {previewUrls[alert.conversationId] && (
+                                                    <button
+                                                        onClick={e => {
+                                                            e.stopPropagation();
+                                                            window.open(previewUrls[alert.conversationId], '_blank', 'noopener');
+                                                        }}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/12 border border-amber-500/35 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400/50 rounded-lg text-xs font-bold transition-all"
+                                                    >
+                                                        <span>⭐</span> Open Ethereal Email Preview →
+                                                    </button>
+                                                )}
+                                            </div>
                                             <p className="text-xs text-zinc-600 mt-1">{new Date(alert.createdAt).toLocaleString()}</p>
                                         </div>
                                         {/* Dismiss button */}

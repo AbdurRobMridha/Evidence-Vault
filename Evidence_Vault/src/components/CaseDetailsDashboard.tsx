@@ -18,6 +18,7 @@ interface CaseFile {
   integrityStatus?: 'VERIFIED' | 'COMPROMISED' | 'PENDING';
   uploadedBy: string;
   uploadTimestamp: string;
+  storageKey?: string;   // direct localStorage key for auto-generated evidence
 }
 
 interface CaseDashboardProps {
@@ -33,6 +34,7 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
   const [evidenceRecords, setEvidenceRecords] = useState<EvidenceRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('date');
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{
@@ -122,6 +124,7 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
           integrityStatus: ev.integrity_status,
           uploadedBy: ev.uploaded_by,
           uploadTimestamp: ev.upload_timestamp,
+          storageKey: ev.storageKey,   // ← carry through for direct download
         }));
         if (!cancelled) {
           setFiles(localFiles);
@@ -334,12 +337,26 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
     setFiles(prev => prev.filter(f => f.id !== fileId));
     setEvidenceRecords(prev => prev.filter(r => r.file_id !== fileId));
     removeEvidenceFromCase(caseId, fileId);
+    setSelectedFileIds(prev => { const next = new Set(prev); next.delete(fileId); return next; });
   };
 
-  const downloadFile = (fileName: string, clientHash?: string) => {
-    const success = handleDownloadEvidence(fileName, clientHash);
+  const deleteSelectedFiles = () => {
+    if (selectedFileIds.size === 0) return;
+    const names = files.filter(f => selectedFileIds.has(f.id)).map(f => f.name).join(', ');
+    if (!window.confirm(`Permanently delete ${selectedFileIds.size} file(s)?\n\n${names}\n\nThis cannot be undone.`)) return;
+    selectedFileIds.forEach(id => {
+      removeEvidenceFromCase(caseId, id);
+    });
+    appendAuditEntry(caseId, 'evidence_deleted', uploadedBy, 'user', `Bulk deleted ${selectedFileIds.size} file(s): ${names}`);
+    setFiles(prev => prev.filter(f => !selectedFileIds.has(f.id)));
+    setEvidenceRecords(prev => prev.filter(r => !selectedFileIds.has(r.file_id)));
+    setSelectedFileIds(new Set());
+  };
+
+  const downloadFile = (file: CaseFile) => {
+    const success = handleDownloadEvidence(file.name, file.clientHash, file.storageKey);
     if (success) {
-      appendAuditEntry(caseId, 'evidence_verified', uploadedBy, 'user', `Downloaded: ${fileName}`);
+      appendAuditEntry(caseId, 'evidence_verified', uploadedBy, 'user', `Downloaded: ${file.name}`);
     }
   };
 
@@ -476,12 +493,43 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
             </select>
           </div>
 
+          {/* Bulk action bar */}
+          {selectedFileIds.size > 0 && (
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg">
+              <span className="text-sm text-zinc-300 font-semibold">{selectedFileIds.size} file{selectedFileIds.size > 1 ? 's' : ''} selected</span>
+              <div className="flex-1" />
+              <button
+                onClick={() => setSelectedFileIds(new Set())}
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1"
+              >Clear</button>
+              <button
+                onClick={deleteSelectedFiles}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-lg transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete {selectedFileIds.size} file{selectedFileIds.size > 1 ? 's' : ''}
+              </button>
+            </div>
+          )}
+
           {/* Files Table */}
           {filteredFiles.length > 0 ? (
             <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
               <table className="w-full">
                 <thead className="bg-zinc-800/50 border-b border-zinc-700">
                   <tr>
+                    <th className="px-4 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                        checked={filteredFiles.length > 0 && filteredFiles.every(f => selectedFileIds.has(f.id))}
+                        onChange={e => {
+                          if (e.target.checked) setSelectedFileIds(new Set(filteredFiles.map(f => f.id)));
+                          else setSelectedFileIds(new Set());
+                        }}
+                        title="Select all"
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-400">NAME</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-400">DATE MODIFIED</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-zinc-400">SIZE</th>
@@ -493,9 +541,23 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
                   {filteredFiles.map((file, idx) => (
                     <tr
                       key={file.id}
-                      className={`border-b border-zinc-800 hover:bg-zinc-800/30 transition-colors ${idx % 2 === 0 ? 'bg-zinc-900/50' : ''
+                      className={`border-b border-zinc-800 hover:bg-zinc-800/30 transition-colors ${selectedFileIds.has(file.id) ? 'bg-emerald-500/5' : idx % 2 === 0 ? 'bg-zinc-900/50' : ''
                         }`}
                     >
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                          checked={selectedFileIds.has(file.id)}
+                          onChange={e => {
+                            setSelectedFileIds(prev => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(file.id); else next.delete(file.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      </td>
                       <td className="px-6 py-4">
                         <div>
                           <p className="font-semibold text-zinc-100">{file.name}</p>
@@ -510,7 +572,7 @@ export default function CaseDetailsDashboard({ caseId, uploadedBy, userId, userE
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => downloadFile(file.name, file.clientHash)}
+                            onClick={() => downloadFile(file)}
                             className="p-2 hover:bg-zinc-700 rounded transition-colors"
                             title="Download"
                           >

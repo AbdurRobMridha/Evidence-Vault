@@ -16,6 +16,7 @@ import Login from './pages/Login';
 import HomePage from './pages/HomePage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import SocialMonitoringPage from './pages/SocialMonitoringPage';
+import EmergencyAccessPage from './pages/EmergencyAccessPage';
 import { getUnreadAlertCount } from './lib/socialMonitorStore';
 
 // ─── Protected Route ──────────────────────────────────────────────────────────
@@ -218,6 +219,8 @@ export default function App() {
         {/* ── Public Routes ─────────────────────────── */}
         <Route path="/" element={<HomePage user={user} />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        {/* One-time emergency access link for trusted contacts — no auth required */}
+        <Route path="/access/:token" element={<EmergencyAccessPage />} />
 
         <Route
           path="/login"

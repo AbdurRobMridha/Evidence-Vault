@@ -9,6 +9,7 @@ export type AuditAction =
     | 'priority_changed'
     | 'evidence_uploaded'
     | 'evidence_verified'
+    | 'evidence_deleted'
     | 'report_generated'
     | 'case_exported'
     | 'case_locked'
@@ -141,6 +142,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
     priority_changed: 'Priority Changed',
     evidence_uploaded: 'Evidence Uploaded',
     evidence_verified: 'Evidence Verified',
+    evidence_deleted: 'Evidence Deleted',
     report_generated: 'Report Generated',
     case_exported: 'Case Exported',
     case_locked: 'Case Locked',
@@ -166,6 +168,7 @@ export const ACTION_COLORS: Record<AuditAction, string> = {
     priority_changed: 'text-amber-400',
     evidence_uploaded: 'text-emerald-400',
     evidence_verified: 'text-emerald-400',
+    evidence_deleted: 'text-red-400',
     report_generated: 'text-purple-400',
     case_exported: 'text-purple-400',
     case_locked: 'text-amber-400',

@@ -104,13 +104,14 @@ export default function CaseDetails() {
 
   if (!caseData) return <div className="p-8 text-red-400">Case not found</div>;
 
-  // Strict RBAC check AFTER case is loaded (per Part 1 instructions)
+  // Strict RBAC check AFTER case is loaded
   const isCreatorIdMatch = managedCase?.createdBy === user?.id || caseData.user_id === user?.id;
+  const isCreatorEmailMatch = !!(managedCase?.createdByEmail && user?.email && managedCase.createdByEmail === user.email);
   const isAssigned = managedCase?.assignedInvestigators?.includes(user?.id || '');
   const isAdmin = user?.role === 'admin';
   const isInvestigator = user?.role === 'investigator';
 
-  if (!isAdmin && !isCreatorIdMatch && !isAssigned) {
+  if (!isAdmin && !isCreatorIdMatch && !isCreatorEmailMatch && !isAssigned) {
     // If we get here, they are not admin, not the creator, and not an assigned investigator.
     // They cannot view this case.
     return (

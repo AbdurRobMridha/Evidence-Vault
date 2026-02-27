@@ -46,18 +46,20 @@ export interface CaseData {
 // ─── localStorage Helpers ──────────────────────────────────────────────────────
 
 /**
- * Scan all `evidence_*` keys in localStorage and return parsed entries.
+ * Scan all `evidence_*` AND `ev_file_*` keys in localStorage.
  */
 function getAllStoredEvidence(): StoredEvidence[] {
     const results: StoredEvidence[] = [];
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (!key || !key.startsWith('evidence_')) continue;
+        if (!key) continue;
+        // Both upload formats: 'evidence_*' (CaseDetailsDashboard) and 'ev_file_*' (social monitor auto-attach)
+        if (!key.startsWith('evidence_') && !key.startsWith('ev_file_')) continue;
         try {
             const raw = localStorage.getItem(key);
             if (!raw) continue;
             const parsed = JSON.parse(raw);
-            if (parsed && parsed.name) {
+            if (parsed && parsed.name && parsed.data) {
                 results.push(parsed as StoredEvidence);
             }
         } catch {
@@ -171,25 +173,36 @@ function triggerBrowserDownload(blob: Blob, filename: string): void {
 
 /**
  * Download an evidence file from localStorage.
- * Searches by hash first, then by filename.
+ * Tries storageKey first (most reliable — direct pointer saved at upload time),
+ * then hash, then filename scan.
  *
- * @param fileName - The file name to look for
- * @param clientHash - Optional SHA-256 hash for reliable lookup  
+ * @param fileName   - The file name to look for
+ * @param clientHash - Optional SHA-256 hash for reliable lookup
+ * @param storageKey - Optional direct localStorage key (fastest + most reliable)
  * @returns true if download was triggered
  */
-export function handleDownloadEvidence(fileName: string, clientHash?: string): boolean {
+export function handleDownloadEvidence(fileName: string, clientHash?: string, storageKey?: string): boolean {
     try {
-        // Find the stored evidence
         let stored: StoredEvidence | null = null;
 
-        if (clientHash) {
-            stored = findByHash(clientHash);
-        }
-        if (!stored) {
-            stored = findByName(fileName);
+        // 1. Direct storageKey lookup (fastest — used for auto-generated evidence)
+        if (storageKey) {
+            stored = findByStorageKey(storageKey);
+            if (stored) console.log(`[Download] Found by storageKey: ${fileName}`);
         }
 
-        // Check if we found it
+        // 2. Hash lookup
+        if (!stored && clientHash) {
+            stored = findByHash(clientHash);
+            if (stored) console.log(`[Download] Found by hash: ${fileName}`);
+        }
+
+        // 3. Name scan
+        if (!stored) {
+            stored = findByName(fileName);
+            if (stored) console.log(`[Download] Found by name: ${fileName}`);
+        }
+
         if (!stored) {
             alert(
                 `File "${fileName}" not found in browser storage.\n\n` +
@@ -199,7 +212,6 @@ export function handleDownloadEvidence(fileName: string, clientHash?: string): b
             return false;
         }
 
-        // Check if base64 data exists and is valid
         if (!stored.data || typeof stored.data !== 'string' || stored.data.length < 10) {
             alert(
                 `File "${fileName}" metadata exists but file content is missing.\n\n` +
@@ -209,18 +221,13 @@ export function handleDownloadEvidence(fileName: string, clientHash?: string): b
             return false;
         }
 
-        // Convert base64 → Blob
         const blob = base64ToBlob(stored.data, stored.type || 'application/octet-stream');
 
         if (!blob || blob.size === 0) {
-            alert(
-                `File "${fileName}" data is corrupted and cannot be reconstructed.\n\n` +
-                `Please re-upload the evidence file.`
-            );
+            alert(`File "${fileName}" data is corrupted and cannot be reconstructed.`);
             return false;
         }
 
-        // Trigger real browser download
         triggerBrowserDownload(blob, stored.name || fileName);
         console.log(`[Download] ✓ Started download: ${stored.name} (${blob.size} bytes)`);
         return true;
@@ -265,8 +272,27 @@ export async function exportCaseAsZip(
     const report = onProgress || (() => { });
     report(5);
 
-    // 1. Fetch case data from API
-    const caseData = await fetchCaseData(caseId);
+    // 1. Try to fetch case data from API; fall through gracefully for localStorage-only cases
+    let caseData: CaseData;
+    try {
+        const res = await fetch(`/api/cases/${caseId}`);
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        caseData = await res.json();
+    } catch {
+        // Social-monitor cases live entirely in localStorage — construct minimal shell
+        caseData = {
+            id: caseId,
+            title: caseId,
+            description: 'Auto-generated case from Social Monitor',
+            status: 'open',
+            created_at: new Date().toISOString(),
+            user_id: userEmail,
+            risk_score: 0,
+            risk_analysis: '',
+            evidence: [],
+            logs: [],
+        };
+    }
     report(15);
 
     const zip = new JSZip();

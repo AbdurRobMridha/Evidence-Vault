@@ -1,11 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Shield, Upload, Hash, FileCheck, Link2, ScrollText, Package,
     ShieldCheck, Eye, HardDrive, ClipboardList, FolderOpen, Zap,
     Lock, CheckCircle, ArrowRight, ChevronDown, Fingerprint, Clock,
     AlertTriangle, Bell, UserCheck, Mail, FileText, Activity,
-    ShieldAlert, Timer, RefreshCw, Send, KeyRound
+    ShieldAlert, Timer, RefreshCw, Send, KeyRound,
+    Radar, MessageSquare, Wifi, Siren, BrainCircuit,
+    FolderPlus, Smartphone, BarChart3, MonitorSmartphone
 } from 'lucide-react';
 import './HomePage.css';
 import AIOverviewSection from '../components/AIOverviewSection';
@@ -51,11 +53,13 @@ function SectionTitle({ label, title, subtitle, labelColor = 'emerald' }: {
     label: string;
     title: string;
     subtitle?: string;
-    labelColor?: 'emerald' | 'amber';
+    labelColor?: 'emerald' | 'amber' | 'purple' | 'blue';
 }) {
     const colorMap = {
         emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
         amber: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+        purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+        blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
     };
     return (
         <div className="ev-reveal text-center mb-14">
@@ -65,6 +69,259 @@ function SectionTitle({ label, title, subtitle, labelColor = 'emerald' }: {
             <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4">{title}</h2>
             {subtitle && <p className="text-zinc-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
         </div>
+    );
+}
+
+// ─── Social Monitor Section ───────────────────────────────────────────────────
+function SocialMonitorSection({ isLoggedIn, navigate }: { isLoggedIn: boolean; navigate: (path: string) => void }) {
+    const [activePlatform, setActivePlatform] = useState(0);
+
+    const platforms = [
+        { name: 'WhatsApp', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', emoji: '💬' },
+        { name: 'Messenger', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20', emoji: '✉️' },
+        { name: 'Telegram', color: 'text-sky-400', bg: 'bg-sky-500/10 border-sky-500/20', emoji: '📨' },
+        { name: 'Instagram DM', color: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/20', emoji: '📸' },
+        { name: 'SMS', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', emoji: '📱' },
+        { name: 'Twitter DM', color: 'text-zinc-300', bg: 'bg-zinc-700/50 border-zinc-600/30', emoji: '🐦' },
+    ];
+
+    const features = [
+        {
+            icon: BrainCircuit,
+            title: 'AI Risk Scoring',
+            desc: 'Advanced AI analysing each conversation in real time, assigning a risk score from 1–10 with a plain-language threat summary and targeted recommendations.',
+            color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20',
+        },
+        {
+            icon: MonitorSmartphone,
+            title: 'Multi-Platform Scanning',
+            desc: 'Monitor WhatsApp, Messenger, Telegram, Instagram DM, SMS, and Twitter DM simultaneously — all through a single unified dashboard.',
+            color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20',
+        },
+        {
+            icon: FolderPlus,
+            title: 'Automatic Case Generation',
+            desc: 'When the AI detects a risk score of 8–10, a full forensic case is instantly created and appears in your My Cases dashboard — ready for evidence management.',
+            color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20',
+        },
+        {
+            icon: Siren,
+            title: 'One-Tap Emergency Trigger',
+            desc: 'Instantly escalate any scan to an emergency case and dispatch a secure forensic alert to your trusted contact — bypassing all timers for immediate protection.',
+            color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20',
+        },
+        {
+            icon: FileText,
+            title: 'Preserved Chat Evidence',
+            desc: 'Every preserved chat transcript is serialised as a forensic-grade text file, attached to the case evidence store, and included in the ZIP export.',
+            color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20',
+        },
+        {
+            icon: ShieldAlert,
+            title: 'Dead-Man Switch Integration',
+            desc: 'High-risk social threats automatically arm the dead-man switch. If you stop checking in, your trusted contact is notified with the full evidence package.',
+            color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20',
+        },
+    ];
+
+    const steps = [
+        { icon: Wifi, num: '01', title: 'Connect Your Accounts', desc: 'Grant permission once through the secure Social Monitor portal. Scanning starts immediately and continues until you disable it.' },
+        { icon: Radar, num: '02', title: 'AI Scans Every Message', desc: 'Our AI reads imported conversation threads and assigns a risk score with threat labels, keywords, and actionable recommendations.' },
+        { icon: BarChart3, num: '03', title: 'Review Risk Dashboard', desc: 'All scan results appear in your personal risk dashboard. Filter by platform, severity, or date. Expand any scan for the full AI report.' },
+        { icon: Siren, num: '04', title: 'Act or Auto-Escalate', desc: 'Manually create a case, trigger emergency contact alert, or let the system auto-escalate critical threats — all without leaving the app.' },
+    ];
+
+    // Demo scan card data
+    const demoMessages = [
+        { sender: 'Blocked_Sender_X', content: 'I can see you right now. Send ৳50,000 or I share everything.', time: '10:00', dir: 'incoming' },
+        { sender: 'ME', content: 'Please stop messaging me. I have reported this.', time: '10:01', dir: 'outgoing' },
+        { sender: 'Blocked_Sender_X', content: 'Last warning. You have 2 hours. I know where you live.', time: '10:03', dir: 'incoming' },
+    ];
+
+    return (
+        <Section id="social-monitor" className="bg-zinc-950 overflow-hidden">
+            {/* Ambient glow */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[700px] h-[400px] rounded-full bg-purple-600/5 blur-[120px]" />
+            </div>
+
+            <SectionTitle
+                label="Social Media Monitor"
+                title="Your 24/7 AI Threat Watchdog"
+                subtitle="Continuously scans your social media conversations across every major platform, scores risk with AI, auto-generates forensic cases, and instantly alerts trusted contacts — all before a threat escalates."
+                labelColor="purple"
+            />
+
+            {/* ── Hero Demo Card ────────────────────────────────────────────── */}
+            <div className="ev-reveal ev-delay-1 max-w-5xl mx-auto mb-20">
+                <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-zinc-900 via-zinc-900 to-purple-900/10 p-6 md:p-10 shadow-2xl shadow-purple-900/10">
+                    <div className="flex flex-col lg:flex-row gap-8 items-start">
+
+                        {/* Left: mock chat */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                    <MessageSquare className="w-4.5 h-4.5 text-emerald-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-zinc-200">Blocked_Sender_X</p>
+                                    <p className="text-xs text-zinc-500">WhatsApp · Preserved Conversation</p>
+                                </div>
+                                <span className="ml-auto text-xs font-bold bg-red-500/15 text-red-400 border border-red-500/25 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse inline-block" />
+                                    RISK 9/10
+                                </span>
+                            </div>
+
+                            {/* Chat bubbles */}
+                            <div className="space-y-3 bg-zinc-950/70 rounded-xl p-4 border border-zinc-800/60">
+                                {demoMessages.map((m, i) => (
+                                    <div key={i} className={`flex ${m.dir === 'outgoing' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[80%] px-3.5 py-2 rounded-2xl text-sm ${m.dir === 'incoming'
+                                            ? 'bg-red-500/10 border border-red-500/20 text-red-100 rounded-tl-none'
+                                            : 'bg-zinc-700/60 text-zinc-200 rounded-tr-none'}`}>
+                                            {m.dir === 'incoming' && <p className="text-xs text-red-400 font-semibold mb-1">{m.sender}</p>}
+                                            <p>{m.content}</p>
+                                            <p className={`text-xs mt-1 ${m.dir === 'incoming' ? 'text-red-400/60' : 'text-zinc-500'}`}>{m.time}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Right: AI analysis result */}
+                        <div className="lg:w-64 flex-shrink-0 space-y-4">
+                            <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-4">
+                                <p className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <BrainCircuit className="w-3.5 h-3.5" /> AI Analysis
+                                </p>
+                                <div className="mb-3">
+                                    <div className="flex justify-between text-xs mb-1">
+                                        <span className="text-zinc-400">Risk Level</span>
+                                        <span className="text-red-400 font-bold">CRITICAL</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                                        <div className="h-2 rounded-full bg-gradient-to-r from-red-600 to-red-400 animate-pulse" style={{ width: '90%' }} />
+                                    </div>
+                                    <div className="flex justify-between text-xs mt-0.5 text-zinc-600">
+                                        <span>0</span><span className="text-red-400 font-bold">9 / 10</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {['Physical location threats', 'Financial extortion', 'Photo-based coercion'].map((t, i) => (
+                                        <div key={i} className="flex items-center gap-2 text-xs text-red-300">
+                                            <AlertTriangle className="w-3 h-3 text-red-400 flex-shrink-0" />
+                                            {t}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4">
+                                <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <CheckCircle className="w-3.5 h-3.5" /> Auto Actions
+                                </p>
+                                <div className="space-y-1.5">
+                                    {['Evidence preserved ✓', 'Case auto-created ✓', 'Trusted contact alerted ✓'].map((a, i) => (
+                                        <p key={i} className="text-xs text-emerald-300/80">{a}</p>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── 6 Feature Cards ──────────────────────────────────────────── */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
+                {features.map(({ icon: Icon, title, desc, color, bg }, i) => (
+                    <div key={i} className={`ev-reveal ev-delay-${Math.min(i + 1, 6)} ev-glass-card p-6 group hover:border-purple-500/30 transition-all`}>
+                        <div className={`w-11 h-11 rounded-xl border flex items-center justify-center mb-4 ${bg} group-hover:scale-110 transition-transform`}>
+                            <Icon className={`w-5 h-5 ${color}`} />
+                        </div>
+                        <h3 className="text-base font-bold text-zinc-100 mb-2">{title}</h3>
+                        <p className="text-sm text-zinc-400 leading-relaxed">{desc}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* ── How It Works ─────────────────────────────────────────────── */}
+            <div className="mb-20">
+                <h3 className="ev-reveal text-center text-sm font-bold text-zinc-400 mb-10 tracking-widest uppercase">
+                    How Social Monitoring Works
+                </h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {steps.map(({ icon: Icon, num, title, desc }, i) => (
+                        <div key={i} className={`ev-reveal ev-delay-${i + 1} relative text-center`}>
+                            {/* Connector line */}
+                            {i < steps.length - 1 && (
+                                <div className="hidden lg:block absolute top-10 left-[calc(50%+28px)] right-[-calc(50%-28px)] h-px bg-gradient-to-r from-purple-500/30 to-transparent" />
+                            )}
+                            <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-4 relative z-10">
+                                <Icon className="w-5 h-5 text-purple-400" />
+                            </div>
+                            <span className="text-xs font-black text-purple-500/40 tracking-widest">{num}</span>
+                            <h4 className="text-sm font-bold text-zinc-100 mt-1 mb-2">{title}</h4>
+                            <p className="text-xs text-zinc-400 leading-relaxed">{desc}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Platform Support Pills ────────────────────────────────────── */}
+            <div className="ev-reveal mb-16 text-center">
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-5">Supported Platforms</p>
+                <div className="flex flex-wrap justify-center gap-3">
+                    {platforms.map((p, i) => (
+                        <button
+                            key={i}
+                            onClick={() => setActivePlatform(i)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border transition-all ${activePlatform === i ? p.bg + ' ' + p.color : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:border-zinc-500'}`}
+                        >
+                            <span>{p.emoji}</span> {p.name}
+                        </button>
+                    ))}
+                </div>
+                <p className="text-xs text-zinc-600 mt-3">Click to preview → connecting {platforms[activePlatform].name} in Social Monitor</p>
+            </div>
+
+            {/* ── CTA Block ────────────────────────────────────────────────── */}
+            <div className="ev-reveal ev-delay-2">
+                <div className="relative rounded-2xl border border-purple-500/20 bg-gradient-to-br from-zinc-900 to-purple-900/10 p-8 md:p-12 text-center overflow-hidden">
+                    <div className="absolute inset-0 opacity-10">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full bg-purple-600 blur-[100px]" />
+                    </div>
+                    <div className="relative z-10">
+                        <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-6">
+                            <Radar className="w-8 h-8 text-purple-400" />
+                        </div>
+                        <h3 className="text-2xl md:text-3xl font-bold text-zinc-100 mb-4">
+                            Start Monitoring Your Safety Today
+                        </h3>
+                        <p className="text-zinc-400 max-w-xl mx-auto mb-8 leading-relaxed">
+                            One account. Six platforms. 24/7 AI threat detection. Automatic case creation and emergency alerts — all in one place.
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <button
+                                onClick={() => navigate(isLoggedIn ? '/social-monitor' : '/register')}
+                                className="ev-btn-glow bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 py-3.5 rounded-xl text-base flex items-center gap-2 transition-all"
+                            >
+                                {isLoggedIn ? 'Open Social Monitor' : 'Get Started Free'}
+                                <ArrowRight className="w-4 h-4" />
+                            </button>
+                            {!isLoggedIn && (
+                                <button
+                                    onClick={() => navigate('/login')}
+                                    className="text-zinc-400 hover:text-zinc-200 font-semibold px-6 py-3.5 text-base transition-colors"
+                                >
+                                    Sign In →
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Section>
     );
 }
 
@@ -249,6 +506,10 @@ export default function HomePage({ user }: { user?: any }) {
                     <div className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
                         <a href="#about" className="hover:text-emerald-400 transition-colors">About</a>
                         <a href="#features" className="hover:text-emerald-400 transition-colors">Features</a>
+                        <a href="#social-monitor" className="hover:text-purple-400 transition-colors flex items-center gap-1.5">
+                            <Radar className="w-3.5 h-3.5 text-purple-400" />
+                            Social Monitor
+                        </a>
                         <a href="#deadman" className="hover:text-amber-400 transition-colors flex items-center gap-1.5">
                             <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                             Safety
@@ -523,6 +784,9 @@ export default function HomePage({ user }: { user?: any }) {
             {/* ═══════════════ AI OVERVIEW ═══════════════ */}
             <AIOverviewSection isLoggedIn={isLoggedIn} />
 
+            {/* ═══════════════ SOCIAL MONITOR SECTION ═══════════════ */}
+            <SocialMonitorSection isLoggedIn={isLoggedIn} navigate={navigate} />
+
             {/* ═══════════════ DEAD-MAN SWITCH SECTION ═══════════════ */}
             <DeadManSwitchSection />
 
@@ -610,6 +874,10 @@ export default function HomePage({ user }: { user?: any }) {
                             <div className="space-y-2">
                                 <a href="#about" className="block text-sm text-zinc-500 hover:text-emerald-400 transition-colors">About</a>
                                 <a href="#features" className="block text-sm text-zinc-500 hover:text-emerald-400 transition-colors">Features</a>
+                                <a href="#social-monitor" className="block text-sm text-zinc-500 hover:text-purple-400 transition-colors flex items-center gap-1.5">
+                                    <Radar className="w-3 h-3 text-purple-400" />
+                                    Social Monitor
+                                </a>
                                 <a href="#deadman" className="block text-sm text-zinc-500 hover:text-amber-400 transition-colors flex items-center gap-1.5">
                                     <AlertTriangle className="w-3 h-3 text-amber-500" />
                                     Dead-Man Switch

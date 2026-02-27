@@ -93,10 +93,14 @@ export function getManagedCaseById(caseId: string): ManagedCase | null {
     return getAllManagedCases().find(c => c.caseId === caseId) ?? null;
 }
 
-export function getCasesForUser(userId: string, role: string): ManagedCase[] {
+export function getCasesForUser(userId: string, role: string, userEmail?: string): ManagedCase[] {
     const all = getAllManagedCases();
     if (role === 'admin') return all;
-    return all.filter(c => c.assignedInvestigators.includes(userId) || c.createdBy === userId);
+    return all.filter(c =>
+        c.assignedInvestigators.includes(userId) ||
+        c.createdBy === userId ||
+        (userEmail && c.createdByEmail === userEmail)
+    );
 }
 
 export function createManagedCase(data: {

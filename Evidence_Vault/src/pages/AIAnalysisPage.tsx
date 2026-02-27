@@ -26,7 +26,7 @@ export default function AIAnalysisPage() {
         const u = getCurrentAppUser();
         setUser(u);
         if (u) {
-            const userCases = getCasesForUser(u.id, u.role);
+            const userCases = getCasesForUser(u.id, u.role, u.email);
             setCases(userCases);
         }
     }, []);

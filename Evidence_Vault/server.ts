@@ -1220,9 +1220,9 @@ setInterval(() => {
   });
 }, 60000); // Check every minute for demo
 
-// ─── Social Monitor: DMS Fire Endpoint ───────────────────────────────────────
+// \u2500\u2500\u2500 Social Monitor: DMS Fire Endpoint \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 app.post('/api/social-monitor/dms-fire', express.json(), async (req, res) => {
-  const { scanId, contactName, platform, riskLevel } = req.body || {};
+  const { scanId, contactName, platform, riskLevel, caseId, accessLink, accessToken } = req.body || {};
   try {
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(mockUserId) as any;
     let trusted: any[] = [];
@@ -1244,29 +1244,95 @@ app.post('/api/social-monitor/dms-fire', express.json(), async (req, res) => {
     })();
 
     const to = emails.length > 0 ? emails : [from];
+    const triggeredAt = new Date().toUTCString();
+
+    // Build the one-time access block (shown only when a link was provided)
+    const accessSection = accessLink ? `
+      <!-- One-Time Access Link -->
+      <div style="margin:28px 0;background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(220,38,38,0.04));border:1.5px solid rgba(239,68,68,0.35);border-radius:14px;padding:24px;text-align:center;">
+        <p style="color:#fca5a5;font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px;">🔑 One-Time Secure Access Link</p>
+        <p style="color:#a1a1aa;font-size:12px;margin:0 0 18px;line-height:1.6;">
+          This link grants you <strong style="color:#fca5a5;">single-use, read-only access</strong> to the forensic case files,
+          evidence attachments, and AI threat analysis reports associated with this emergency.<br>
+          <strong style="color:#ef4444;">The link expires 72 hours after it was issued and can only be used once.</strong>
+        </p>
+        <a href="${accessLink}"
+           style="display:inline-block;background:#dc2626;color:#fff;font-weight:800;font-size:15px;padding:14px 32px;border-radius:10px;text-decoration:none;letter-spacing:0.02em;box-shadow:0 4px 20px rgba(220,38,38,0.4);">
+          🔓 Access Case Files &amp; Evidence →
+        </a>
+        <p style="margin:14px 0 0;color:#71717a;font-size:11px;">
+          Access Token: <code style="color:#a1a1aa;font-family:monospace;background:#0a0a0a;padding:2px 6px;border-radius:4px;">${(accessToken || '').slice(0, 20)}…</code><br>
+          Direct URL: <a href="${accessLink}" style="color:#71717a;font-size:10px;word-break:break-all;">${accessLink}</a>
+        </p>
+      </div>` : '';
+
     const info = await transporter.sendMail({
       from: `"Evidence Vault" <${from}>`,
       to: to.join(', '),
-      subject: `🚨 EMERGENCY: High-Risk Social Media Threat Detected (Risk ${riskLevel}/10)`,
+      subject: `🚨 EMERGENCY: High-Risk Social Media Threat Detected (Risk ${riskLevel}/10) — Action Required`,
       html: `
-        <div style="background:#0a0a0a;color:#e5e5e5;font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
-          <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:24px;margin-bottom:24px;">
-            <h1 style="color:#ef4444;margin:0 0 8px;">🚨 Dead Man's Switch Activated</h1>
-            <p style="color:#fca5a5;margin:0;">Social Media Monitoring detected a critical threat and the user did not respond in time.</p>
+        <div style="background:#09090b;color:#e4e4e7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:640px;margin:0 auto;padding:40px 28px;">
+
+          <!-- Header Banner -->
+          <div style="background:rgba(239,68,68,0.09);border:1.5px solid rgba(239,68,68,0.3);border-radius:16px;padding:28px 24px;margin-bottom:28px;text-align:center;">
+            <div style="font-size:36px;margin-bottom:10px;">🚨</div>
+            <h1 style="color:#ef4444;margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-0.02em;">Dead Man's Switch Activated</h1>
+            <p style="color:#fca5a5;margin:0;font-size:14px;line-height:1.6;">
+              Evidence Vault's Social Media Monitor detected a <strong>CRITICAL threat</strong> and the user did
+              not respond in time. You have been designated as a trusted emergency contact.
+            </p>
           </div>
-          <table style="width:100%;border-collapse:collapse;background:#18181b;border-radius:12px;overflow:hidden;">
-            <tr><td style="padding:12px 16px;color:#71717a;width:140px;">Platform</td><td style="padding:12px 16px;color:#e5e5e5;font-weight:600;">${platform}</td></tr>
-            <tr><td style="padding:12px 16px;color:#71717a;">Contact</td><td style="padding:12px 16px;color:#e5e5e5;">${contactName}</td></tr>
-            <tr><td style="padding:12px 16px;color:#71717a;">Risk Level</td><td style="padding:12px 16px;color:#ef4444;font-weight:700;">${riskLevel}/10 — CRITICAL</td></tr>
-            <tr><td style="padding:12px 16px;color:#71717a;">Triggered</td><td style="padding:12px 16px;color:#e5e5e5;">${new Date().toISOString()}</td></tr>
+
+          <!-- Threat Details Table -->
+          <table style="width:100%;border-collapse:separate;border-spacing:0;background:#18181b;border:1px solid #27272a;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+            <tbody>
+              <tr style="border-bottom:1px solid #27272a;">
+                <td style="padding:14px 18px;color:#71717a;font-size:13px;width:130px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Platform</td>
+                <td style="padding:14px 18px;color:#e4e4e7;font-weight:700;">${platform}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #27272a;">
+                <td style="padding:14px 18px;color:#71717a;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Contact</td>
+                <td style="padding:14px 18px;color:#e4e4e7;">${contactName}</td>
+              </tr>
+              <tr style="border-bottom:1px solid #27272a;">
+                <td style="padding:14px 18px;color:#71717a;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Risk Level</td>
+                <td style="padding:14px 18px;"><span style="color:#ef4444;font-weight:800;font-size:16px;">${riskLevel}/10</span>&nbsp;<span style="color:#fca5a5;background:rgba(239,68,68,0.12);padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;">CRITICAL</span></td>
+              </tr>
+              ${caseId ? `<tr style="border-bottom:1px solid #27272a;"><td style="padding:14px 18px;color:#71717a;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Case ID</td><td style="padding:14px 18px;color:#a1a1aa;font-family:monospace;font-size:13px;">${caseId}</td></tr>` : ''}
+              <tr>
+                <td style="padding:14px 18px;color:#71717a;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Triggered</td>
+                <td style="padding:14px 18px;color:#e4e4e7;font-size:13px;">${triggeredAt}</td>
+              </tr>
+            </tbody>
           </table>
-          <p style="color:#71717a;font-size:12px;margin-top:24px;">This automated message was sent by Evidence Vault's Dead Man's Switch safety system.</p>
+
+          ${accessSection}
+
+          <!-- What To Do -->
+          <div style="background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px 22px;margin-bottom:24px;">
+            <p style="color:#a1a1aa;font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 12px;">📋 Recommended Actions</p>
+            <ol style="color:#a1a1aa;font-size:13px;line-height:1.85;margin:0;padding-left:18px;">
+              <li>Click the access link above to view the full case file and download all evidence.</li>
+              <li>Verify the integrity of each file using the SHA-256 hash provided in the case details.</li>
+              <li>Contact relevant authorities (police, legal counsel) and share the downloaded evidence package.</li>
+              <li>Record that you received this email — it is timestamped and forms part of the chain of custody.</li>
+            </ol>
+          </div>
+
+          <!-- Legal Notice -->
+          <div style="border-top:1px solid #27272a;padding-top:20px;color:#52525b;font-size:11px;line-height:1.7;">
+            <p style="margin:0 0 6px;">• This message was generated automatically by Evidence Vault's Dead Man's Switch safety system.</p>
+            <p style="margin:0 0 6px;">• All evidence files carry SHA-256 cryptographic hashes proving no tampering has occurred since upload.</p>
+            <p style="margin:0 0 6px;">• Your access of the case files will be permanently recorded in the immutable audit trail.</p>
+            <p style="margin:0;">• The one-time access link expires <strong style="color:#71717a;">72 hours</strong> from the time this email was sent.</p>
+          </div>
+
         </div>`,
     });
 
     let previewUrl: string | false = false;
     if (isDemoMode) previewUrl = nodemailer.getTestMessageUrl(info);
-    logAudit(null, mockUserId, 'emergency_release', `Social Monitor DMS fired: ${platform}/${contactName} risk=${riskLevel}. Preview: ${previewUrl || 'N/A'}`);
+    logAudit(null, mockUserId, 'emergency_release', `Social Monitor DMS fired: ${platform}/${contactName} risk=${riskLevel} caseId=${caseId || 'n/a'}. Access link included: ${!!accessLink}. Preview: ${previewUrl || 'N/A'}`);
     res.json({ success: true, isDemoMode, previewUrl });
   } catch (e: any) {
     console.error('[Social Monitor DMS]', e);
