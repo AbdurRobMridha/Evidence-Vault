@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Download, Clock, Trash2, Package, Loader2, Lock, Unlock, ShieldCheck, ShieldAlert, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import CaseDetailsDashboard from '../components/CaseDetailsDashboard';
+import GeoSafetyAlert from '../components/GeoSafetyAlert';
 import { exportCaseAsZip } from '../lib/evidenceDownload';
 import { getCurrentAppUser, canAccessCase, hasPermission, type AppUser } from '../lib/rbac';
 import { getManagedCaseById, updateManagedCase, getNextStatuses, type ManagedCase, type CaseStatus } from '../lib/caseStore';
 import { appendAuditEntry } from '../lib/auditLog';
 import { CaseStatusBadge, CasePriorityBadge } from '../components/admin/CaseStatusBadge';
 import { RoleBadge } from '../components/admin/RoleBadge';
+import { recordCaseActivity, isHighRiskCase } from '../lib/safetyMonitor';
 
 export default function CaseDetails() {
   const { id } = useParams();
@@ -43,6 +45,10 @@ export default function CaseDetails() {
           risk_score: mc.priority === 'Critical' ? 9 : mc.priority === 'High' ? 7 : mc.priority === 'Medium' ? 4 : 2,
           user_id: mc.createdBy,
         });
+        // Record activity for Survivors Safety Monitor
+        if (isHighRiskCase(mc.priority)) {
+          recordCaseActivity(mc.caseId);
+        }
         setLoading(false);
         return;
       }
@@ -269,6 +275,11 @@ export default function CaseDetails() {
           )}
         </div>
       </div>
+
+      {/* Geo-Safety Alert — shown for high-risk cases */}
+      {managedCase && isHighRiskCase(managedCase.priority) && (
+        <GeoSafetyAlert priority={managedCase.priority} caseTitle={managedCase.title} />
+      )}
 
       {/* Dashboard with tabs */}
       <CaseDetailsDashboard

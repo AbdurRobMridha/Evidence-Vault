@@ -1,9 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, FileText, AlertTriangle, Settings, Users, LogOut, Home, Cpu, Radar, Bell } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Settings, Users, LogOut, Home, Cpu, Radar, Bell, X as XIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './lib/firebase';
+import { runInactivityCheck, type SafetyAlertEntry } from './lib/safetyMonitor';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -143,6 +144,7 @@ function Layout({ children, user, onLogout }: { children: React.ReactNode; user:
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [safetyBanners, setSafetyBanners] = useState<SafetyAlertEntry[]>([]);
 
   useEffect(() => {
     // Check localStorage for demo mode user
@@ -182,6 +184,27 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // ── Survivors Safety Monitor ─────────────────────────────────────────────
+  useEffect(() => {
+    const check = () => {
+      const triggered = runInactivityCheck();
+      if (triggered.length > 0) {
+        setSafetyBanners(prev => [...triggered, ...prev].slice(0, 5));
+      }
+    };
+    check();
+    const interval = setInterval(check, 60_000);
+    const handler = (e: Event) => {
+      const entry = (e as CustomEvent<SafetyAlertEntry>).detail;
+      setSafetyBanners(prev => [entry, ...prev].slice(0, 5));
+    };
+    window.addEventListener('ev:safety-alert', handler);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('ev:safety-alert', handler);
+    };
+  }, []);
+
   const handleLogin = (userData: any) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -215,6 +238,32 @@ export default function App() {
 
   return (
     <Router>
+      {/* Survivors Safety Alert Banners */}
+      {safetyBanners.length > 0 && (
+        <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+          {safetyBanners.map((alert) => (
+            <div key={alert.id} className="pointer-events-auto bg-red-950 border border-red-500/40 rounded-xl p-4 shadow-2xl shadow-red-900/40">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <AlertTriangle className="w-4 h-4 text-red-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-red-300">Survivors Safety Alert</p>
+                  <p className="text-xs text-red-400/80 mt-0.5 leading-relaxed">
+                    Case <strong className="text-red-200">"{alert.caseTitle}"</strong> ({alert.priority}) inactive for <strong>{alert.inactiveHours}h</strong>.
+                    {alert.statusChanged && <span> Status escalated to <strong>{alert.newStatus}</strong>.</span>}
+                    {' '}Authority notified.
+                  </p>
+                  <p className="text-[10px] text-red-500/60 font-mono mt-1">{new Date(alert.triggeredAt).toLocaleString()}</p>
+                </div>
+                <button onClick={() => setSafetyBanners(prev => prev.filter(a => a.id !== alert.id))} className="text-red-500 hover:text-red-300 flex-shrink-0">
+                  <XIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <Routes>
         {/* ── Public Routes ─────────────────────────── */}
         <Route path="/" element={<HomePage user={user} />} />

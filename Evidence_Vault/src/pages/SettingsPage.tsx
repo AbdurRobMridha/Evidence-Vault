@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Clock, ShieldAlert, CheckCircle2, AlertTriangle, Save, Mail, Send, ToggleLeft, ToggleRight, Loader2, RefreshCw } from 'lucide-react';
+import { Clock, ShieldAlert, CheckCircle2, AlertTriangle, Save, Mail, Send, ToggleLeft, ToggleRight, Loader2, RefreshCw, Bell, MapPin, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+  getSafetyMonitorSettings, saveSafetyMonitorSettings, getSafetyAlerts,
+  clearSafetyAlerts, runInactivityCheck, resetCaseNotified,
+  requestNotificationPermission, type SafetyMonitorSettings, type SafetyAlertEntry,
+} from '../lib/safetyMonitor';
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null);
@@ -20,6 +25,13 @@ export default function SettingsPage() {
   const [testingEmail, setTestingEmail] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [testToEmail, setTestToEmail] = useState('');
+
+  // Survivors Safety Monitor
+  const [monitorSettings, setMonitorSettings] = useState<SafetyMonitorSettings>(getSafetyMonitorSettings());
+  const [alertLog, setAlertLog] = useState<SafetyAlertEntry[]>(getSafetyAlerts());
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
+    'Notification' in window ? Notification.permission : 'denied'
+  );
 
   const formatTimestamp = (val: any) => {
     if (!val) return 'Never';
@@ -295,8 +307,8 @@ export default function SettingsPage() {
 
           {/* SMTP Status */}
           <div className={`rounded-xl px-4 py-3 mb-6 flex items-center gap-3 ${smtpConfigured
-              ? 'bg-emerald-500/10 border border-emerald-500/20'
-              : 'bg-blue-500/10 border border-blue-500/20'
+            ? 'bg-emerald-500/10 border border-emerald-500/20'
+            : 'bg-blue-500/10 border border-blue-500/20'
             }`}>
             <div className={`w-2.5 h-2.5 rounded-full ${smtpConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400 animate-pulse'
               }`}></div>
@@ -421,6 +433,183 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* ════════════ SURVIVORS SAFETY MONITOR ════════════ */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-500 via-red-500 to-amber-500" />
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <Bell className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-zinc-100">Survivors Safety Monitor</h2>
+              <p className="text-sm text-zinc-400">Auto-notify authority &amp; escalate status if inactive on high-risk cases</p>
+            </div>
+          </div>
+
+          <div className="space-y-5 max-w-lg">
+            {/* Enable toggle */}
+            <div className="flex items-center justify-between py-3 px-4 bg-zinc-950 rounded-xl border border-zinc-800">
+              <div>
+                <p className="text-sm font-medium text-zinc-200">Enable Inactivity Monitor</p>
+                <p className="text-xs text-zinc-500 mt-0.5">Watch High / Critical cases for user inactivity</p>
+              </div>
+              <button onClick={() => setMonitorSettings(s => ({ ...s, enabled: !s.enabled }))} className="flex items-center">
+                {monitorSettings.enabled
+                  ? <ToggleRight className="w-10 h-10 text-emerald-400" />
+                  : <ToggleLeft className="w-10 h-10 text-zinc-600" />}
+              </button>
+            </div>
+
+            {/* Inactivity threshold */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Inactivity Threshold (Hours)</label>
+              <select
+                value={monitorSettings.inactivityHours}
+                onChange={e => setMonitorSettings(s => ({ ...s, inactivityHours: Number(e.target.value) }))}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-100 focus:outline-none focus:border-amber-500"
+              >
+                <option value={1}>1 Hour (Demo / Test)</option>
+                <option value={2}>2 Hours</option>
+                <option value={6}>6 Hours</option>
+                <option value={12}>12 Hours</option>
+                <option value={24}>24 Hours</option>
+                <option value={48}>48 Hours</option>
+                <option value={72}>72 Hours</option>
+              </select>
+              <p className="text-xs text-zinc-600 mt-1">Trigger alert if user hasn't visited a High/Critical case within this window.</p>
+            </div>
+
+            {/* Authority email */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Authority Email to Notify</label>
+              <input
+                type="email"
+                value={monitorSettings.authorityEmail}
+                onChange={e => setMonitorSettings(s => ({ ...s, authorityEmail: e.target.value }))}
+                placeholder="authority@police.gov"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-100 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            {/* Browser notifications */}
+            <div className="flex items-center justify-between py-3 px-4 bg-zinc-950 rounded-xl border border-zinc-800">
+              <div>
+                <p className="text-sm font-medium text-zinc-200">Browser Push Notifications</p>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Status: <span className={notifPerm === 'granted' ? 'text-emerald-400' : 'text-amber-400'}>{notifPerm}</span>
+                </p>
+              </div>
+              {notifPerm !== 'granted' && (
+                <button
+                  onClick={async () => { const p = await requestNotificationPermission(); setNotifPerm(p); }}
+                  className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition-colors"
+                >
+                  Enable
+                </button>
+              )}
+              {notifPerm === 'granted' && (
+                <button
+                  onClick={() => setMonitorSettings(s => ({ ...s, notifyBrowser: !s.notifyBrowser }))}
+                  className="flex items-center"
+                >
+                  {monitorSettings.notifyBrowser
+                    ? <ToggleRight className="w-9 h-9 text-emerald-400" />
+                    : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                </button>
+              )}
+            </div>
+
+            {/* Save */}
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => { saveSafetyMonitorSettings(monitorSettings); alert('Survivors Safety settings saved!'); }}
+                className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 font-medium px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Save Safety Settings
+              </button>
+
+              {/* Demo trigger */}
+              <button
+                onClick={() => {
+                  const triggered = runInactivityCheck();
+                  setAlertLog(getSafetyAlerts());
+                  if (triggered.length === 0) {
+                    alert('No inactivity alerts triggered. Either no high-risk cases exist, or cases were recently accessed.');
+                  } else {
+                    alert(`${triggered.length} alert(s) triggered! Check the log below.`);
+                  }
+                }}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 text-sm"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                Run Check Now
+              </button>
+
+              <button
+                onClick={() => { clearSafetyAlerts(); setAlertLog([]); }}
+                className="bg-zinc-900 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 border border-zinc-800 hover:border-red-500/30 font-medium px-3 py-2.5 rounded-lg transition-colors flex items-center gap-2 text-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear Log
+              </button>
+            </div>
+
+            {/* Geo-Safety info */}
+            <div className="flex items-start gap-3 bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+              <MapPin className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                <strong className="text-zinc-300">Geo-Safety Alert</strong> automatically appears on any High or Critical case.
+                It lists the nearest support centers (police, legal aid, shelter, medical) so survivors can get help immediately.
+                Locations are hardcoded for demo; production would use GPS lookup.
+              </p>
+            </div>
+
+            {/* Alert Log */}
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-200 mb-3 flex items-center gap-2">
+                <Bell className="w-4 h-4 text-amber-400" />
+                Inactivity Alert Log
+                {alertLog.length > 0 && (
+                  <span className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">{alertLog.length}</span>
+                )}
+              </h3>
+              {alertLog.length === 0 ? (
+                <div className="text-center py-6 bg-zinc-950 border border-zinc-800 rounded-xl">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500/40 mx-auto mb-2" />
+                  <p className="text-sm text-zinc-500">No alerts triggered yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {alertLog.map(a => (
+                    <div key={a.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex items-start gap-3">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${a.priority === 'Critical' ? 'bg-red-500/15' : 'bg-amber-500/15'}`}>
+                        <AlertTriangle className={`w-3.5 h-3.5 ${a.priority === 'Critical' ? 'text-red-400' : 'text-amber-400'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-zinc-200 truncate">{a.caseTitle}</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">
+                          Inactive <strong className="text-zinc-400">{a.inactiveHours}h</strong> · {a.priority} · {a.actionTaken}
+                        </p>
+                        <p className="text-[9px] text-zinc-600 font-mono mt-0.5">{new Date(a.triggeredAt).toLocaleString()}</p>
+                      </div>
+                      <button
+                        onClick={() => { resetCaseNotified(a.caseId); setAlertLog(getSafetyAlerts()); }}
+                        title="Reset notification for this case (allow re-triggering)"
+                        className="text-zinc-600 hover:text-zinc-400 text-[10px] flex-shrink-0"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
