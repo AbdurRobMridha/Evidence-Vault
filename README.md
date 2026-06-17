@@ -1,4 +1,4 @@
-﻿# Evidence Vault
+# Evidence Vault
 
 [![Live Site](https://img.shields.io/badge/Live-evidence--vault--yuqu.onrender.com-brightgreen)](https://evidence-vault-yuqu.onrender.com) [![Demo Video](https://img.shields.io/badge/Watch-Demo%20Video-red)](https://youtu.be/_vztS2-JNHs)
 
@@ -61,12 +61,12 @@ Victims of cyber harassment, technology-facilitated abuse, stalking, and digital
 - Integrity status: `VERIFIED` (hashes match) or `FAILED` (mismatch = tampering detected)
 - Evidence linked to cases with full metadata (file name, size, type, timestamps)
 ### 2. AI-Powered Threat Analysis
-- **Primary**: Google Gemini API (`gemini-3.1-pro-preview`) â€” structured JSON analysis
+- **Primary**: Google Gemini API (`gemini-3.1-pro-preview`) — structured JSON analysis
 - **Fallback**: Local keyword + file-type heuristic analyzer (never fails; always produces output)
-- Outputs: `risk_score` (1â€“10), `detected_threats[]`, `recommendations[]`
+- Outputs: `risk_score` (1–10), `detected_threats[]`, `recommendations[]`
 - Analysis is separated from case creation (2-step: analyze first, then preserve)
 ### 3. Case Management Dashboard
-- Full case lifecycle: `Draft â†’ Open â†’ Under Investigation â†’ Evidence Verified â†’ Report Generated â†’ Closed â†’ Archived`
+- Full case lifecycle: `Draft → Open → Under Investigation → Evidence Verified → Report Generated → Closed → Archived`
 - Valid transitions enforced via `VALID_TRANSITIONS` map
 - Priority levels: `Low | Medium | High | Critical`
 - Cases support: locking, tamper flags, digital signatures (simulated), assigned investigators
@@ -82,7 +82,7 @@ Victims of cyber harassment, technology-facilitated abuse, stalking, and digital
 ### 5. Social Media Monitoring
 - Connect accounts: WhatsApp, Messenger, SMS, Telegram, Instagram DM, Twitter DM
 - AI scans conversations for threat indicators
-- Risk levels 1â€“10; auto-creates cases when threshold exceeded (default: â‰¥8)
+- Risk levels 1–10; auto-creates cases when threshold exceeded (default: ≥8)
 - DMS timeout per conversation: if user doesn't respond within configured minutes, emergency email fires
 - "Mark as Safe" button to dismiss false positives
 ### 6. Forensic Report Generation
@@ -111,53 +111,53 @@ Victims of cyber harassment, technology-facilitated abuse, stalking, and digital
 ---
 ## Architecture Overview
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                        BROWSER (Client)                             â”‚
-â”‚                                                                     â”‚
-â”‚  React 19 + React Router v7 + TailwindCSS v4 + Framer Motion       â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
-â”‚  â”‚ HomePage   â”‚ â”‚ Dashboard â”‚ â”‚ Upload   â”‚ â”‚ Social Monitor       â”‚ â”‚
-â”‚  â”‚ (public)   â”‚ â”‚ (cases)   â”‚ â”‚ (evidenceâ”‚ â”‚ (chat scanning)      â”‚ â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚  +AI)    â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
-â”‚  â”‚ Authority  â”‚ â”‚ AI        â”‚              â”‚ Settings             â”‚ â”‚
-â”‚  â”‚ Dashboard  â”‚ â”‚ Analysis  â”‚              â”‚ (DMS config)         â”‚ â”‚
-â”‚  â”‚ (admin)    â”‚ â”‚ Page      â”‚              â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                                       â”‚
-â”‚                                                                     â”‚
-â”‚  localStorage stores:                                               â”‚
-â”‚    ev_managed_cases, ev_audit_log, ev_users, ev_social_*,           â”‚
-â”‚    cases, evidence, user                                            â”‚
-â”‚                                                                     â”‚
-â”‚  Firebase Auth (optional) â†â†’ Firebase Storage (optional)            â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                          â”‚ HTTP REST (fetch)
-                          â–¼
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                     EXPRESS SERVER (server.ts)                       â”‚
-â”‚                     Port 3000 (dev: Vite middleware)                 â”‚
-â”‚                                                                     â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”‚
-â”‚  â”‚ /api/cases     â”‚  â”‚ /api/analyze  â”‚  â”‚ /api/deadman/checkin   â”‚ â”‚
-â”‚  â”‚ /api/evidence  â”‚  â”‚ /api/preserve â”‚  â”‚ /api/safety            â”‚ â”‚
-â”‚  â”‚ /api/auth      â”‚  â”‚ /api/me       â”‚  â”‚ /api/emergency-release â”‚ â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â”‚
-â”‚                                                                     â”‚
-â”‚  Gemini AI (via @google/genai) â†â†’ Local Fallback Analyzer          â”‚
-â”‚  Nodemailer (SMTP / Ethereal demo)                                  â”‚
-â”‚  Multer (file uploads â†’ /uploads/)                                  â”‚
-â”‚  SQLite (better-sqlite3 â†’ /data/vault.db)                           â”‚
-â”‚  Dead-Man Timer Cron (setInterval, every 60s)                       â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚                     FIREBASE (Optional/Production)                  â”‚
-â”‚                                                                     â”‚
-â”‚  Firestore: evidence, evidence_audit_logs                           â”‚
-â”‚  Storage: evidence/{caseId}/{evidenceId}/{filename}                 â”‚
-â”‚  Auth: Email/Password                                               â”‚
-â”‚  Cloud Functions: startUpload, onObjectFinalized                    â”‚
-â”‚  Security Rules: firestore.rules (immutable evidence fields)        â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌─────────────────────────────────────────────────────────────────────┐
+│                        BROWSER (Client)                             │
+│                                                                     │
+│  React 19 + React Router v7 + TailwindCSS v4 + Framer Motion       │
+│  ┌───────────┐ ┌───────────┐ ┌──────────┐ ┌──────────────────────┐ │
+│  │ HomePage   │ │ Dashboard │ │ Upload   │ │ Social Monitor       │ │
+│  │ (public)   │ │ (cases)   │ │ (evidence│ │ (chat scanning)      │ │
+│  └───────────┘ └───────────┘ │  +AI)    │ └──────────────────────┘ │
+│  ┌───────────┐ ┌───────────┐ └──────────┘ ┌──────────────────────┐ │
+│  │ Authority  │ │ AI        │              │ Settings             │ │
+│  │ Dashboard  │ │ Analysis  │              │ (DMS config)         │ │
+│  │ (admin)    │ │ Page      │              └──────────────────────┘ │
+│  └───────────┘ └───────────┘                                       │
+│                                                                     │
+│  localStorage stores:                                               │
+│    ev_managed_cases, ev_audit_log, ev_users, ev_social_*,           │
+│    cases, evidence, user                                            │
+│                                                                     │
+│  Firebase Auth (optional) ←→ Firebase Storage (optional)            │
+└─────────────────────────┬───────────────────────────────────────────┘
+                          │ HTTP REST (fetch)
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     EXPRESS SERVER (server.ts)                       │
+│                     Port 3000 (dev: Vite middleware)                 │
+│                                                                     │
+│  ┌────────────────┐  ┌───────────────┐  ┌────────────────────────┐ │
+│  │ /api/cases     │  │ /api/analyze  │  │ /api/deadman/checkin   │ │
+│  │ /api/evidence  │  │ /api/preserve │  │ /api/safety            │ │
+│  │ /api/auth      │  │ /api/me       │  │ /api/emergency-release │ │
+│  └────────────────┘  └───────────────┘  └────────────────────────┘ │
+│                                                                     │
+│  Gemini AI (via @google/genai) ←→ Local Fallback Analyzer          │
+│  Nodemailer (SMTP / Ethereal demo)                                  │
+│  Multer (file uploads → /uploads/)                                  │
+│  SQLite (better-sqlite3 → /data/vault.db)                           │
+│  Dead-Man Timer Cron (setInterval, every 60s)                       │
+└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                     FIREBASE (Optional/Production)                  │
+│                                                                     │
+│  Firestore: evidence, evidence_audit_logs                           │
+│  Storage: evidence/{caseId}/{evidenceId}/{filename}                 │
+│  Auth: Email/Password                                               │
+│  Cloud Functions: startUpload, onObjectFinalized                    │
+│  Security Rules: firestore.rules (immutable evidence fields)        │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 ---
 ## Technology Stack
@@ -171,7 +171,7 @@ Victims of cyber harassment, technology-facilitated abuse, stalking, and digital
 | Icons | lucide-react | 0.546.0 | Icon set used across UI |
 | Build Tool | Vite | 6.2.0 | Dev server (HMR) and production bundler |
 | Language | TypeScript | 5.8.2 | Type safety across frontend and backend |
-| Backend Runtime | Node.js + Express | â€” | REST API server |
+| Backend Runtime | Node.js + Express | — | REST API server |
 | Backend Runner (dev) | tsx | 4.21.0 | Run TypeScript directly in development |
 | Database | better-sqlite3 | 12.6.2 | Embedded SQLite for cases, evidence, audit logs |
 | File Upload | multer | 2.0.2 | Multipart/form-data file handling |
@@ -189,86 +189,86 @@ Victims of cyber harassment, technology-facilitated abuse, stalking, and digital
 ## Directory Structure
 ```
 Evidence-Vault/
-â”œâ”€â”€ README.md                          â† THIS FILE
-â””â”€â”€ Evidence_Vault/                    â† Main application directory
-    â”œâ”€â”€ package.json                   â† Dependencies & scripts
-    â”œâ”€â”€ tsconfig.json                  â† TypeScript config (ES2022, React JSX)
-    â”œâ”€â”€ vite.config.ts                 â† Vite config (TailwindCSS plugin, path aliases)
-    â”œâ”€â”€ tailwind.config.cjs            â† TailwindCSS config
-    â”œâ”€â”€ server.ts                      â† Express backend (1361 lines, all API routes)
-    â”œâ”€â”€ index.html                     â† HTML entry point (SPA shell)
-    â”œâ”€â”€ metadata.json                  â† AI Studio metadata
-    â”œâ”€â”€ firestore.rules                â† Firestore security rules
-    â”œâ”€â”€ .env.example                   â† Environment variable template
-    â”œâ”€â”€ .gitignore
-    â”‚
-    â”œâ”€â”€ src/                           â† Frontend source code
-    â”‚   â”œâ”€â”€ main.tsx                   â† React entry point (ReactDOM.createRoot)
-    â”‚   â”œâ”€â”€ App.tsx                    â† Root component: routing, auth, layout, safety banners
-    â”‚   â”œâ”€â”€ index.css                  â† Global CSS (TailwindCSS import)
-    â”‚   â”‚
-    â”‚   â”œâ”€â”€ pages/                     â† Page-level components (route targets)
-    â”‚   â”‚   â”œâ”€â”€ HomePage.tsx           â† Public landing page (59KB, animated hero)
-    â”‚   â”‚   â”œâ”€â”€ HomePage.css           â† Landing page custom styles
-    â”‚   â”‚   â”œâ”€â”€ Login.tsx              â† Firebase Auth + demo mode login/register
-    â”‚   â”‚   â”œâ”€â”€ Dashboard.tsx          â† Case management dashboard (CRUD, metrics)
-    â”‚   â”‚   â”œâ”€â”€ CaseDetails.tsx        â† Individual case view (evidence, logs, actions)
-    â”‚   â”‚   â”œâ”€â”€ EvidenceUpload.tsx     â† File upload + SHA-256 hashing + preserve workflow
-    â”‚   â”‚   â”œâ”€â”€ AIAnalysisPage.tsx     â† AI threat analysis interface
-    â”‚   â”‚   â”œâ”€â”€ AuthorityDashboard.tsx â† Admin-only: escalated cases, metrics
-    â”‚   â”‚   â”œâ”€â”€ SocialMonitoringPage.tsx â† Social media scanning (68KB, largest page)
-    â”‚   â”‚   â”œâ”€â”€ SettingsPage.tsx       â† DMS config, trusted contacts, emergency release
-    â”‚   â”‚   â”œâ”€â”€ EmergencyAccessPage.tsx â† Token-based one-time access for trusted contacts
-    â”‚   â”‚   â””â”€â”€ UnauthorizedPage.tsx   â† 403 error page
-    â”‚   â”‚
-    â”‚   â”œâ”€â”€ components/                â† Reusable UI components
-    â”‚   â”‚   â”œâ”€â”€ AIOverviewSection.tsx       â† AI analysis summary card
-    â”‚   â”‚   â”œâ”€â”€ CaseDetailsDashboard.tsx    â† Case detail with status workflow, notes, actions
-    â”‚   â”‚   â”œâ”€â”€ EvidenceRecordDisplay.tsx   â† Evidence file record card (hash, integrity)
-    â”‚   â”‚   â”œâ”€â”€ ForensicReportPanel.tsx     â† In-app forensic report viewer/generator
-    â”‚   â”‚   â”œâ”€â”€ GeoSafetyAlert.tsx          â† Geolocation-based safety alerts
-    â”‚   â”‚   â””â”€â”€ admin/                      â† Admin-specific components
-    â”‚   â”‚       â”œâ”€â”€ AuditLogPanel.tsx        â† Audit log viewer with filters, export
-    â”‚   â”‚       â”œâ”€â”€ CaseOverviewMetrics.tsx  â† Dashboard metric cards
-    â”‚   â”‚       â”œâ”€â”€ CaseStatusBadge.tsx      â† Status indicator badge
-    â”‚   â”‚       â”œâ”€â”€ InvestigatorManagement.tsx â† Assign/remove investigators
-    â”‚   â”‚       â”œâ”€â”€ InviteInvestigatorModal.tsx â† Email invitation modal
-    â”‚   â”‚       â””â”€â”€ RoleBadge.tsx            â† Role indicator badge
-    â”‚   â”‚
-    â”‚   â””â”€â”€ lib/                       â† Business logic & data access modules
-    â”‚       â”œâ”€â”€ firebase.ts            â† Firebase app initialization (auth, storage)
-    â”‚       â”œâ”€â”€ rbac.ts                â† Role-based access control (4 roles, 20 permissions)
-    â”‚       â”œâ”€â”€ caseStore.ts           â† Case CRUD in localStorage (ManagedCase type)
-    â”‚       â”œâ”€â”€ evidenceStore.ts       â† Evidence metadata in localStorage
-    â”‚       â”œâ”€â”€ auditLog.ts            â† Audit log system (append-only, max 500 entries)
-    â”‚       â”œâ”€â”€ aiAnalyzer.ts          â† Client-side AI analysis (calls /api/analyze)
-    â”‚       â”œâ”€â”€ safetyMonitor.ts       â† Survivors safety monitor (inactivity detection)
-    â”‚       â”œâ”€â”€ socialMonitorStore.ts  â† Social media monitor store (accounts, scans, alerts)
-    â”‚       â”œâ”€â”€ ForensicReportGenerator.ts â† PDF forensic report builder (jsPDF)
-    â”‚       â”œâ”€â”€ forensicRecords.ts     â† Forensic record data structures
-    â”‚       â”œâ”€â”€ evidenceDownload.ts    â† Evidence export/download utilities
-    â”‚       â”œâ”€â”€ emergencyAccessStore.ts â† Emergency access token management
-    â”‚       â”œâ”€â”€ investigatorRequests.ts â† Investigator invite/request handling
-    â”‚       â”œâ”€â”€ inviteStore.ts         â† Invitation link store
-    â”‚       â””â”€â”€ utils.ts               â† Utility helpers (cn function)
-    â”‚
-    â”œâ”€â”€ functions/                     â† Firebase Cloud Functions
-    â”‚   â”œâ”€â”€ index.js                   â† startUpload + onObjectFinalized triggers
-    â”‚   â””â”€â”€ package.json               â† Cloud Functions dependencies
-    â”‚
-    â”œâ”€â”€ firebase/                      â† Firebase config
-    â”‚   â””â”€â”€ firestore.rules            â† Firestore security rules (duplicate of root)
-    â”‚
-    â”œâ”€â”€ data/                          â† Runtime data
-    â”‚   â””â”€â”€ vault.db                   â† SQLite database file (auto-created)
-    â”‚
-    â”œâ”€â”€ uploads/                       â† Uploaded evidence files (multer destination)
-    â”œâ”€â”€ dist/                          â† Production build output (vite build)
-    â””â”€â”€ node_modules/                  â† Dependencies
+├── README.md                          ← THIS FILE
+└── Evidence_Vault/                    ← Main application directory
+    ├── package.json                   ← Dependencies & scripts
+    ├── tsconfig.json                  ← TypeScript config (ES2022, React JSX)
+    ├── vite.config.ts                 ← Vite config (TailwindCSS plugin, path aliases)
+    ├── tailwind.config.cjs            ← TailwindCSS config
+    ├── server.ts                      ← Express backend (1361 lines, all API routes)
+    ├── index.html                     ← HTML entry point (SPA shell)
+    ├── metadata.json                  ← AI Studio metadata
+    ├── firestore.rules                ← Firestore security rules
+    ├── .env.example                   ← Environment variable template
+    ├── .gitignore
+    │
+    ├── src/                           ← Frontend source code
+    │   ├── main.tsx                   ← React entry point (ReactDOM.createRoot)
+    │   ├── App.tsx                    ← Root component: routing, auth, layout, safety banners
+    │   ├── index.css                  ← Global CSS (TailwindCSS import)
+    │   │
+    │   ├── pages/                     ← Page-level components (route targets)
+    │   │   ├── HomePage.tsx           ← Public landing page (59KB, animated hero)
+    │   │   ├── HomePage.css           ← Landing page custom styles
+    │   │   ├── Login.tsx              ← Firebase Auth + demo mode login/register
+    │   │   ├── Dashboard.tsx          ← Case management dashboard (CRUD, metrics)
+    │   │   ├── CaseDetails.tsx        ← Individual case view (evidence, logs, actions)
+    │   │   ├── EvidenceUpload.tsx     ← File upload + SHA-256 hashing + preserve workflow
+    │   │   ├── AIAnalysisPage.tsx     ← AI threat analysis interface
+    │   │   ├── AuthorityDashboard.tsx ← Admin-only: escalated cases, metrics
+    │   │   ├── SocialMonitoringPage.tsx ← Social media scanning (68KB, largest page)
+    │   │   ├── SettingsPage.tsx       ← DMS config, trusted contacts, emergency release
+    │   │   ├── EmergencyAccessPage.tsx ← Token-based one-time access for trusted contacts
+    │   │   └── UnauthorizedPage.tsx   ← 403 error page
+    │   │
+    │   ├── components/                ← Reusable UI components
+    │   │   ├── AIOverviewSection.tsx       ← AI analysis summary card
+    │   │   ├── CaseDetailsDashboard.tsx    ← Case detail with status workflow, notes, actions
+    │   │   ├── EvidenceRecordDisplay.tsx   ← Evidence file record card (hash, integrity)
+    │   │   ├── ForensicReportPanel.tsx     ← In-app forensic report viewer/generator
+    │   │   ├── GeoSafetyAlert.tsx          ← Geolocation-based safety alerts
+    │   │   └── admin/                      ← Admin-specific components
+    │   │       ├── AuditLogPanel.tsx        ← Audit log viewer with filters, export
+    │   │       ├── CaseOverviewMetrics.tsx  ← Dashboard metric cards
+    │   │       ├── CaseStatusBadge.tsx      ← Status indicator badge
+    │   │       ├── InvestigatorManagement.tsx ← Assign/remove investigators
+    │   │       ├── InviteInvestigatorModal.tsx ← Email invitation modal
+    │   │       └── RoleBadge.tsx            ← Role indicator badge
+    │   │
+    │   └── lib/                       ← Business logic & data access modules
+    │       ├── firebase.ts            ← Firebase app initialization (auth, storage)
+    │       ├── rbac.ts                ← Role-based access control (4 roles, 20 permissions)
+    │       ├── caseStore.ts           ← Case CRUD in localStorage (ManagedCase type)
+    │       ├── evidenceStore.ts       ← Evidence metadata in localStorage
+    │       ├── auditLog.ts            ← Audit log system (append-only, max 500 entries)
+    │       ├── aiAnalyzer.ts          ← Client-side AI analysis (calls /api/analyze)
+    │       ├── safetyMonitor.ts       ← Survivors safety monitor (inactivity detection)
+    │       ├── socialMonitorStore.ts  ← Social media monitor store (accounts, scans, alerts)
+    │       ├── ForensicReportGenerator.ts ← PDF forensic report builder (jsPDF)
+    │       ├── forensicRecords.ts     ← Forensic record data structures
+    │       ├── evidenceDownload.ts    ← Evidence export/download utilities
+    │       ├── emergencyAccessStore.ts ← Emergency access token management
+    │       ├── investigatorRequests.ts ← Investigator invite/request handling
+    │       ├── inviteStore.ts         ← Invitation link store
+    │       └── utils.ts               ← Utility helpers (cn function)
+    │
+    ├── functions/                     ← Firebase Cloud Functions
+    │   ├── index.js                   ← startUpload + onObjectFinalized triggers
+    │   └── package.json               ← Cloud Functions dependencies
+    │
+    ├── firebase/                      ← Firebase config
+    │   └── firestore.rules            ← Firestore security rules (duplicate of root)
+    │
+    ├── data/                          ← Runtime data
+    │   └── vault.db                   ← SQLite database file (auto-created)
+    │
+    ├── uploads/                       ← Uploaded evidence files (multer destination)
+    ├── dist/                          ← Production build output (vite build)
+    └── node_modules/                  ← Dependencies
 ```
 ---
 ## Database Schema
-### SQLite (`data/vault.db`) â€” Server-side persistence
+### SQLite (`data/vault.db`) — Server-side persistence
 ```sql
 -- User accounts
 CREATE TABLE users (
@@ -294,7 +294,7 @@ CREATE TABLE cases (
     user_id TEXT REFERENCES users(id),
     title TEXT,
     description TEXT,
-    risk_score INTEGER,                    -- 0â€“10 from AI analysis
+    risk_score INTEGER,                    -- 0–10 from AI analysis
     risk_analysis TEXT,                     -- JSON blob from AI
     status TEXT DEFAULT 'open',            -- 'open' | 'escalated'
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -332,7 +332,7 @@ CREATE TABLE tokens (
     file_path TEXT                         -- Path to generated ZIP
 );
 ```
-### localStorage Keys â€” Client-side persistence
+### localStorage Keys — Client-side persistence
 
 | Key | Type | Description |
 | --- | --- | --- |
@@ -366,7 +366,7 @@ All endpoints are served from `server.ts` on port 3000.
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | GET | `/api/cases` | List all cases for current user |
-| POST | `/api/cases` | Create new case â€” body: `{ title, description }` |
+| POST | `/api/cases` | Create new case — body: `{ title, description }` |
 | GET | `/api/cases/:id` | Get case with evidence and audit logs |
 | POST | `/api/cases/:id/delete` | Delete case (cascade: evidence files, audit logs) |
 | GET | `/api/cases/:id/export` | Export case as ZIP (metadata + evidence + SHA256SUMS + report) |
@@ -377,7 +377,7 @@ All endpoints are served from `server.ts` on port 3000.
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | POST | `/api/cases/:id/evidence` | Upload evidence file (multipart `file`, include `client_sha256` field) |
-| POST | `/api/preserve` | Preserve evidence â€” body: `{ evidenceId, caseId, serverHash }` |
+| POST | `/api/preserve` | Preserve evidence — body: `{ evidenceId, caseId, serverHash }` |
 | POST | `/api/evidence/:id/link` | Link an existing evidence record to a case |
 | POST | `/api/cases/:id/verify` | Log manual verification attempt |
 
@@ -385,9 +385,9 @@ All endpoints are served from `server.ts` on port 3000.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| POST | `/api/analyze` | Analyze text (body: `{ title, description }`) â†’ returns `{ risk_score, risk_analysis, analysisSource }` |
+| POST | `/api/analyze` | Analyze text (body: `{ title, description }`) → returns `{ risk_score, risk_analysis, analysisSource }` |
 
-> Note: `/api/analyze` never returns 500 â€” it falls back to a local heuristic analyzer if Gemini fails.
+> Note: `/api/analyze` never returns 500 — it falls back to a local heuristic analyzer if Gemini fails.
 
 ### Dead-Man Switch (DMS)
 
@@ -449,7 +449,7 @@ All endpoints are served from `server.ts` on port 3000.
 | `/authority` | `AuthorityDashboard` | Protected (admin) | Admin: escalated cases, metrics, investigator tools |
 | `/social-monitor` | `SocialMonitoringPage` | Protected | Social media monitoring and DMS integration |
 | `/settings` | `SettingsPage` | Protected | Dead-Man Switch config, trusted contacts, emergency release |
-| `*` | Redirect to `/` | â€” | Catch-all redirect (404) |
+| `*` | Redirect to `/` | — | Catch-all redirect (404) |
 
 ### Route Guards
 - **`ProtectedRoute`**: Redirects to `/login` if `user` is null.
@@ -471,7 +471,7 @@ Role-Based Access Control system.
 ### `caseStore.ts`
 Primary case management CRUD operating on localStorage.
 - **Type**: `ManagedCase` with full status workflow, priority, locking, tamper flags, digital signatures
-- **Status workflow**: `Draft â†’ Open â†’ Under Investigation â†’ Evidence Verified â†’ Report Generated â†’ Closed â†’ Archived`
+- **Status workflow**: `Draft → Open → Under Investigation → Evidence Verified → Report Generated → Closed → Archived`
 - **Key exports**: `createManagedCase()`, `updateManagedCase()`, `deleteManagedCase()`, `getCaseMetrics()`, `seedDemoCases()`
 ### `auditLog.ts`
 Append-only audit logging system.
@@ -481,7 +481,7 @@ Append-only audit logging system.
 ### `aiAnalyzer.ts`
 Client-side wrapper for AI analysis. Calls `/api/analyze` endpoint.
 ### `safetyMonitor.ts`
-Survivors Safety Monitor â€” tracks user inactivity on high-risk cases.
+Survivors Safety Monitor — tracks user inactivity on high-risk cases.
 - If inactive beyond threshold, auto-escalates case and fires browser alert
 - Exports: `runInactivityCheck()`, safety settings CRUD, `SafetyAlertEntry` type
 ### `socialMonitorStore.ts`
@@ -503,68 +503,130 @@ Emergency access token management for trusted contacts.
 Investigator invitation and request handling logic.
 ---
 ## UI Components
-
 ### Root Components (`src/components/`)
-
-| Component | Description |
-| --- | --- |
-| `AIOverviewSection.tsx` | Displays AI analysis results (risk score gauge, threats, recommendations) |
-| `CaseDetailsDashboard.tsx` | Comprehensive case detail view with status workflow, notes, evidence list |
-| `EvidenceRecordDisplay.tsx` | Individual evidence file card showing metadata, hashes, integrity badge |
-| `ForensicReportPanel.tsx` | In-app forensic report viewer with PDF download option |
-| `GeoSafetyAlert.tsx` | Geolocation-based safety alert display |
+|
+ Component 
+|
+ Description 
+|
+|
+---
+|
+---
+|
+|
+`AIOverviewSection.tsx`
+|
+ Displays AI analysis results (risk score gauge, threats, recommendations) 
+|
+|
+`CaseDetailsDashboard.tsx`
+|
+ Comprehensive case detail view with status workflow, notes, evidence list 
+|
+|
+`EvidenceRecordDisplay.tsx`
+|
+ Individual evidence file card showing metadata, hashes, integrity badge 
+|
+|
+`ForensicReportPanel.tsx`
+|
+ In-app forensic report viewer with PDF download option 
+|
+|
+`GeoSafetyAlert.tsx`
+|
+ Geolocation-based safety alert display 
+|
 ### Admin Components (`src/components/admin/`)
-
-| Component | Description |
-| --- | --- |
-| `AuditLogPanel.tsx` | Full audit log viewer with search, filter, pagination, and export |
-| `CaseOverviewMetrics.tsx` | Dashboard metric cards (total, open, critical counts) |
-| `CaseStatusBadge.tsx` | Colored status indicator (maps to `STATUS_COLORS`) |
-| `InvestigatorManagement.tsx` | Assign/remove investigators from cases |
-| `InviteInvestigatorModal.tsx` | Modal for email-based investigator invitations |
-| `RoleBadge.tsx` | Colored role indicator (maps to `ROLE_COLORS`) |
+|
+ Component 
+|
+ Description 
+|
+|
+---
+|
+---
+|
+|
+`AuditLogPanel.tsx`
+|
+ Full audit log viewer with search, filter, pagination, and export 
+|
+|
+`CaseOverviewMetrics.tsx`
+|
+ Dashboard metric cards (total, open, critical counts) 
+|
+|
+`CaseStatusBadge.tsx`
+|
+ Colored status indicator (maps to 
+`STATUS_COLORS`
+) 
+|
+|
+`InvestigatorManagement.tsx`
+|
+ Assign/remove investigators from cases 
+|
+|
+`InviteInvestigatorModal.tsx`
+|
+ Modal for email-based investigator invitations 
+|
+|
+`RoleBadge.tsx`
+|
+ Colored role indicator (maps to 
+`ROLE_COLORS`
+) 
+|
+---
 ## Key Workflows
 ### Evidence Preservation Flow
 ```
 User uploads file
-    â†’ Browser computes SHA-256 (crypto.subtle.digest)
-    â†’ File sent to server via multipart POST
-    â†’ Server computes independent SHA-256
-    â†’ Hashes compared â†’ integrity_verified: true/false
-    â†’ Evidence record stored in SQLite
-    â†’ Audit log entry created
-    â†’ User clicks "Preserve" â†’ confirmation dialog
-    â†’ Case + evidence linked, preservation logged
+    → Browser computes SHA-256 (crypto.subtle.digest)
+    → File sent to server via multipart POST
+    → Server computes independent SHA-256
+    → Hashes compared → integrity_verified: true/false
+    → Evidence record stored in SQLite
+    → Audit log entry created
+    → User clicks "Preserve" → confirmation dialog
+    → Case + evidence linked, preservation logged
 ```
 ### Dead-Man Switch Flow
 ```
 User configures interval (e.g., 24 hours)
-    â†’ User checks in â†’ timer resets
-    â†’ Timer expires (checked every 60 seconds via setInterval)
-        â†’ User status â†’ 'danger'
-        â†’ All open cases â†’ 'escalated'
-        â†’ For each case:
-            â†’ ZIP archive generated (metadata + evidence + audit logs + SHA256SUMS)
-            â†’ Download token created (24h expiry)
-            â†’ Emergency email built (professional HTML + plaintext fallback)
-            â†’ Email sent to trusted contacts (SMTP or Ethereal demo)
-            â†’ Forensic report attached as .txt
-            â†’ Case metadata attached as .json
-        â†’ emergency_release_sent = 1 (prevents duplicates)
+    → User checks in → timer resets
+    → Timer expires (checked every 60 seconds via setInterval)
+        → User status → 'danger'
+        → All open cases → 'escalated'
+        → For each case:
+            → ZIP archive generated (metadata + evidence + audit logs + SHA256SUMS)
+            → Download token created (24h expiry)
+            → Emergency email built (professional HTML + plaintext fallback)
+            → Email sent to trusted contacts (SMTP or Ethereal demo)
+            → Forensic report attached as .txt
+            → Case metadata attached as .json
+        → emergency_release_sent = 1 (prevents duplicates)
 ```
 ### Social Monitor DMS Flow
 ```
 Social account connected
-    â†’ AI scans conversations (Gemini or fallback)
-    â†’ Risk level assessed (1â€“10)
-    â†’ If risk â‰¥ threshold:
-        â†’ Case auto-created
-        â†’ DMS timer starts (configurable minutes)
-        â†’ User notified (in-app alert)
-        â†’ If user doesn't respond before timeout:
-            â†’ POST /api/social-monitor/dms-fire
-            â†’ Emergency email sent to trusted contacts
-            â†’ One-time access link included in email
+    → AI scans conversations (Gemini or fallback)
+    → Risk level assessed (1–10)
+    → If risk ≥ threshold:
+        → Case auto-created
+        → DMS timer starts (configurable minutes)
+        → User notified (in-app alert)
+        → If user doesn't respond before timeout:
+            → POST /api/social-monitor/dms-fire
+            → Emergency email sent to trusted contacts
+            → One-time access link included in email
 ```
 ---
 ## Authentication & Authorization
@@ -577,25 +639,82 @@ Social account connected
 - Logout clears both Firebase session and localStorage
 ### Authorization Flow
 ```
-User logs in â†’ role determined (admin if email contains 'authority')
-    â†’ ProtectedRoute checks user != null
-    â†’ Layout renders sidebar based on role (admin sees Authority Dashboard)
-    â†’ RBAC module checks permissions per action
-    â†’ caseStore filters cases based on role + assignments
+User logs in → role determined (admin if email contains 'authority')
+    → ProtectedRoute checks user != null
+    → Layout renders sidebar based on role (admin sees Authority Dashboard)
+    → RBAC module checks permissions per action
+    → caseStore filters cases based on role + assignments
 ```
 ---
 ## Data Storage Strategy
-
-The application uses a dual-storage architecture to balance local responsiveness and server-side persistence.
-
-| Storage | Usage | Persistence |
-| --- | --- | --- |
-| SQLite (`better-sqlite3`) | Server-side: cases, evidence metadata, users, audit logs, tokens | Persistent (stored on disk at `data/vault.db`) |
-| localStorage | Client-side: RBAC users (demo), managed cases, audit log, social monitor state, UI settings | Per-browser (survives refresh, not shared across devices) |
-| Firebase Firestore (optional) | Production-grade evidence records and audit logs (if enabled) | Cloud-persistent (recommended for multi-instance setups) |
-| Firebase Storage (optional) | Production: evidence file storage | Cloud-persistent, scalable storage for large files |
-| Disk (`uploads/`) | Default file upload destination via Multer (local/demo) | Stored on the server filesystem (persists between restarts on Render/VMs) |
-
+The application uses a **dual-storage architecture**:
+|
+ Storage 
+|
+ Usage 
+|
+ Persistence 
+|
+|
+---
+|
+---
+|
+---
+|
+|
+**
+SQLite
+**
+ (
+`better-sqlite3`
+) 
+|
+ Server-side: cases, evidence, users, audit logs, tokens 
+|
+ Persistent on disk (
+`data/vault.db`
+) 
+|
+|
+**
+localStorage
+**
+|
+ Client-side: RBAC users, managed cases, audit log, social monitor state, settings 
+|
+ Per-browser, survives refresh 
+|
+|
+**
+Firebase Firestore
+**
+|
+ Production: evidence records, audit logs (optional) 
+|
+ Cloud-persistent 
+|
+|
+**
+Firebase Storage
+**
+|
+ Production: evidence files (optional) 
+|
+ Cloud-persistent 
+|
+|
+**
+Disk
+**
+ (
+`uploads/`
+) 
+|
+ Evidence files uploaded via Multer 
+|
+ Server filesystem 
+|
 ### Why Dual Storage?
 - **Demo mode**: Everything works offline with localStorage + SQLite, no Firebase required
 - **Production mode**: Firebase provides cloud persistence, real auth, secure storage
@@ -621,7 +740,7 @@ The application uses a dual-storage architecture to balance local responsiveness
    - Fires when file upload completes
    - Downloads file to temp directory
    - Computes server-side SHA-256
-   - Compares with client hash â†’ sets `integrity_status` to `VERIFIED` or `FAILED`
+   - Compares with client hash → sets `integrity_status` to `VERIFIED` or `FAILED`
    - Creates 3 audit log entries: `file_uploaded`, `hash_verified`, `integrity_checked`
    - Atomic batch write for consistency
 ---
@@ -719,36 +838,142 @@ npm run dev
 |
 ---
 ## Demo Credentials
-
 ### Pre-seeded Users (SQLite)
-
-| Email | Role | Password |
-| --- | --- | --- |
-| `victim@example.com` | user | (any — mock auth) |
-| `authority@police.gov` | admin | (any — mock auth) |
-
+|
+ Email 
+|
+ Role 
+|
+ Password 
+|
+|
+---
+|
+---
+|
+---
+|
+|
+`victim@example.com`
+|
+ user 
+|
+*
+(any — mock auth)
+*
+|
+|
+`authority@police.gov`
+|
+ admin 
+|
+*
+(any — mock auth)
+*
+|
 ### Pre-seeded RBAC Users (localStorage)
-
-| Email | Role | Name |
-| --- | --- | --- |
-| `authority@police.gov` | admin | Authority Admin |
-| `rahman@investigation.bd` | investigator | Detective Rahman |
-| `karim@investigation.bd` | investigator | Officer Karim |
-| `victim@example.com` | user | Victim User |
-
+|
+ Email 
+|
+ Role 
+|
+ Name 
+|
+|
+---
+|
+---
+|
+---
+|
+|
+`authority@police.gov`
+|
+ admin 
+|
+ Authority Admin 
+|
+|
+`rahman@investigation.bd`
+|
+ investigator 
+|
+ Detective Rahman 
+|
+|
+`karim@investigation.bd`
+|
+ investigator 
+|
+ Officer Karim 
+|
+|
+`victim@example.com`
+|
+ user 
+|
+ Victim User 
+|
 ### Demo Cases (auto-seeded)
-
-| ID | Title | Status | Priority |
-| --- | --- | --- | --- |
-| `demo-case-001` | Phishing Email Investigation | Under Investigation | High |
-| `demo-case-002` | Financial Fraud Analysis | Evidence Verified | Critical |
-| `demo-case-003` | Social Media Harassment Report | Open | Medium |
-| `demo-case-004` | Data Breach Forensics | Draft | High |
-
+|
+ ID 
+|
+ Title 
+|
+ Status 
+|
+ Priority 
+|
+|
+---
+|
+---
+|
+---
+|
+---
+|
+|
+`demo-case-001`
+|
+ Phishing Email Investigation 
+|
+ Under Investigation 
+|
+ High 
+|
+|
+`demo-case-002`
+|
+ Financial Fraud Analysis 
+|
+ Evidence Verified 
+|
+ Critical 
+|
+|
+`demo-case-003`
+|
+ Social Media Harassment Report 
+|
+ Open 
+|
+ Medium 
+|
+|
+`demo-case-004`
+|
+ Data Breach Forensics 
+|
+ Draft 
+|
+ High 
+|
+---
 ## Design Decisions & Trade-offs
 1. **Dual Storage (localStorage + SQLite)**: Allows offline-first demo without Firebase, while the server maintains authoritative state. Trade-off: data can diverge between client and server.
 2. **Mock Authentication**: The server uses hardcoded `mockUserId` for all requests. Real Firebase Auth is optional and only used for the login flow. Trade-off: no real access control at the API level in demo mode.
-3. **AI Analysis Separation**: `/api/analyze` is decoupled from `/api/cases`. Analysis can fail without blocking case creation. The analyze endpoint **never returns 500** â€” it always falls back to local heuristics.
+3. **AI Analysis Separation**: `/api/analyze` is decoupled from `/api/cases`. Analysis can fail without blocking case creation. The analyze endpoint **never returns 500** — it always falls back to local heuristics.
 4. **Evidence Immutability**: Firestore rules prevent clients from modifying `server_sha256`, `integrity_status`, and timestamps after creation. Evidence cannot be deleted. This ensures chain-of-custody integrity.
 5. **Dead-Man Switch as `setInterval`**: For demo purposes, the DMS check runs every 60 seconds via `setInterval` in `server.ts`. In production, this would be a cron job or Cloud Scheduler.
 6. **Ethereal Email Fallback**: If real SMTP is not configured, the system auto-creates a free Ethereal test account and logs preview URLs. This ensures email features are always demonstrable without configuration.
@@ -761,6 +986,6 @@ When working with this codebase:
 - **Frontend entry**: `src/App.tsx` defines all routes and the layout shell. Each route maps to a page in `src/pages/`.
 - **Business logic**: `src/lib/` contains modular stores. Most use localStorage directly. The naming convention is `*Store.ts` for data stores and descriptive names for utilities.
 - **The app works in two modes**: Demo (localStorage + SQLite, mock auth) and Production (Firebase Auth + Firestore + Cloud Functions). Most development/testing uses demo mode.
-- **All data flows through two paths**: Client â†’ localStorage (for RBAC, cases, audit logs) and Client â†’ Express API â†’ SQLite (for evidence, server-side cases, DMS).
+- **All data flows through two paths**: Client → localStorage (for RBAC, cases, audit logs) and Client → Express API → SQLite (for evidence, server-side cases, DMS).
 - **The `cases` key in localStorage** is the legacy store; `ev_managed_cases` is the current RBAC-aware store. Both may coexist.
 # Evidence-Vault
