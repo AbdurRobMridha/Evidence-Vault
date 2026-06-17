@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: evidence-vault
+    env: node
+    plan: free
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+        scope: runtime
+      - key: GEMINI_API_KEY
+        scope: secret
+      - key: APP_URL
+        scope: secret
