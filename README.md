@@ -161,259 +161,31 @@ Victims of cyber harassment, technology-facilitated abuse, stalking, and digital
 ```
 ---
 ## Technology Stack
-|
- Layer 
-|
- Technology 
-|
- Version 
-|
- Purpose 
-|
-|
----
-|
----
-|
----
-|
----
-|
-|
-**
-Frontend Framework
-**
-|
- React 
-|
- 19.0.0 
-|
- UI rendering, component architecture 
-|
-|
-**
-Router
-**
-|
- react-router-dom 
-|
- 7.13.1 
-|
- Client-side routing with protected routes 
-|
-|
-**
-Styling
-**
-|
- TailwindCSS 
-|
- 4.1.14 
-|
- Utility-first CSS (via 
-`@tailwindcss/vite`
- plugin) 
-|
-|
-**
-Animations
-**
-|
- Motion (Framer Motion) 
-|
- 12.23.24 
-|
- Page transitions, micro-animations 
-|
-|
-**
-Icons
-**
-|
- lucide-react 
-|
- 0.546.0 
-|
- Shield, FileText, AlertTriangle, etc. 
-|
-|
-**
-Build Tool
-**
-|
- Vite 
-|
- 6.2.0 
-|
- Dev server (HMR) + production bundler 
-|
-|
-**
-Language
-**
-|
- TypeScript 
-|
- 5.8.2 
-|
- Type safety across frontend + backend 
-|
-|
-**
-Backend Runtime
-**
-|
- Node.js + Express 
-|
- 4.21.2 
-|
- REST API server 
-|
-|
-**
-Backend Runner
-**
-|
- tsx 
-|
- 4.21.0 
-|
- Direct TypeScript execution (dev mode) 
-|
-|
-**
-Database
-**
-|
- better-sqlite3 
-|
- 12.6.2 
-|
- Embedded SQLite for cases, evidence, audit logs 
-|
-|
-**
-File Upload
-**
-|
- Multer 
-|
- 2.0.2 
-|
- Multipart form-data handling 
-|
-|
-**
-AI / LLM
-**
-|
- @google/genai 
-|
- 1.42.0 
-|
- Gemini 3.1 Pro for threat analysis 
-|
-|
-**
-Email
-**
-|
- Nodemailer 
-|
- 6.10.1 
-|
- SMTP or Ethereal (demo) email delivery 
-|
-|
-**
-PDF Reports
-**
-|
- jsPDF + jspdf-autotable 
-|
- 4.2.0 / 5.0.7 
-|
- Forensic report PDF generation 
-|
-|
-**
-ZIP Archives
-**
-|
- Archiver + JSZip 
-|
- 7.0.1 / 3.10.1 
-|
- Evidence export packaging 
-|
-|
-**
-Auth (optional)
-**
-|
- Firebase Auth 
-|
- 12.9.0 
-|
- Email/password authentication 
-|
-|
-**
-Storage (optional)
-**
-|
- Firebase Storage 
-|
- 12.9.0 
-|
- Cloud file storage 
-|
-|
-**
-Cloud Functions
-**
-|
- Firebase Functions v1 
-|
- — 
-|
- Server-side hash verification trigger 
-|
-|
-**
-Date Utility
-**
-|
- date-fns 
-|
- 4.1.0 
-|
- Date formatting in UI 
-|
-|
-**
-CSS Utilities
-**
-|
- clsx + tailwind-merge 
-|
- 2.1.1 / 3.5.0 
-|
- Conditional class merging 
-|
-|
-**
-Env Config
-**
-|
- dotenv 
-|
- 17.2.3 
-|
-`.env`
- file loading 
-|
----
+
+| Layer | Technology | Version | Purpose |
+| --- | --- | ---: | --- |
+| Frontend Framework | React | 19.0.0 | UI rendering and component architecture |
+| Router | react-router-dom | 7.13.1 | Client-side routing with protected routes |
+| Styling | TailwindCSS (+@tailwindcss/vite) | 4.1.14 | Utility-first CSS |
+| Animations | Framer Motion (motion) | 12.23.24 | Page transitions and micro-animations |
+| Icons | lucide-react | 0.546.0 | Icon set used across UI |
+| Build Tool | Vite | 6.2.0 | Dev server (HMR) and production bundler |
+| Language | TypeScript | 5.8.2 | Type safety across frontend and backend |
+| Backend Runtime | Node.js + Express | — | REST API server |
+| Backend Runner (dev) | tsx | 4.21.0 | Run TypeScript directly in development |
+| Database | better-sqlite3 | 12.6.2 | Embedded SQLite for cases, evidence, audit logs |
+| File Upload | multer | 2.0.2 | Multipart/form-data file handling |
+| AI / LLM | @google/genai | 1.42.0 | Google Gemini (structured analysis) |
+| Email | nodemailer | 6.10.1 | SMTP or Ethereal demo delivery |
+| PDF Reports | jsPDF + jspdf-autotable | 4.x / 5.x | Forensic report generation |
+| ZIP Archives | archiver + jszip | 7.x / 3.x | Evidence export packaging |
+| Auth (optional) | Firebase Auth | 12.9.0 | Email/password authentication (optional) |
+| Storage (optional) | Firebase Storage | 12.9.0 | Cloud file storage (optional) |
+| Cloud Functions | Firebase Functions | v1 | Optional serverless triggers (startUpload, onFinalize) |
+| Date Utility | date-fns | 4.1.0 | Date formatting and utilities |
+| CSS Utilities | clsx + tailwind-merge | 2.1.1 / 3.5.0 | Conditional class merging and Tailwind helpers |
+| Env Config | dotenv | 17.2.3 | Load .env files in local development |
+
 ## Directory Structure
 ```
 Evidence-Vault/
@@ -561,584 +333,129 @@ CREATE TABLE tokens (
 );
 ```
 ### localStorage Keys — Client-side persistence
-|
- Key 
-|
- Type 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`user`
-|
-`{uid, email, role}`
-|
- Current logged-in user session 
-|
-|
-`cases`
-|
-`Array<Case>`
-|
- Legacy evidence preservation cases 
-|
-|
-`evidence`
-|
-`Array<Evidence>`
-|
- Legacy evidence metadata 
-|
-|
-`ev_managed_cases`
-|
-`Array<ManagedCase>`
-|
- RBAC-enabled case store (primary) 
-|
-|
-`ev_users`
-|
-`Array<AppUser>`
-|
- RBAC user registry 
-|
-|
-`ev_audit_log`
-|
-`Array<AuditEntry>`
-|
- Global audit log (max 500) 
-|
-|
-`ev_social_accounts`
-|
-`Array<ConnectedAccount>`
-|
- Connected social media accounts 
-|
-|
-`ev_social_scans`
-|
-`Array<ScannedConversation>`
-|
- Social media scan results 
-|
-|
-`ev_social_alerts`
-|
-`Array<SafetyAlert>`
-|
- Social monitoring alerts 
-|
-|
-`ev_social_settings`
-|
-`MonitorSettings`
-|
- Social monitor configuration 
-|
-|
-`ev_safety_monitor_settings`
-|
-`SafetyMonitorSettings`
-|
- Survivors safety monitor config 
-|
-|
-`ev_safety_monitor_activity`
-|
-`Record<caseId, ISO>`
-|
- Last activity per case 
-|
-|
-`ev_safety_monitor_alerts`
-|
-`Array<SafetyAlertEntry>`
-|
- Safety monitor alert log 
-|
-|
-`ev_safety_monitor_notified`
-|
-`string[]`
-|
- Case IDs already notified 
-|
----
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `user` | `{ uid, email, role }` | Current logged-in user session (demo or Firebase) |
+| `cases` | `Array<Case>` | Legacy evidence preservation cases |
+| `evidence` | `Array<Evidence>` | Legacy evidence metadata |
+| `ev_managed_cases` | `Array<ManagedCase>` | RBAC-enabled primary case store |
+| `ev_users` | `Array<AppUser>` | RBAC user registry (demo mode) |
+| `ev_audit_log` | `Array<AuditEntry>` | Global audit log (max 500 entries) |
+| `ev_social_accounts` | `Array<ConnectedAccount>` | Connected social media accounts |
+| `ev_social_scans` | `Array<ScannedConversation>` | Social media scan results |
+| `ev_social_alerts` | `Array<SafetyAlert>` | Social monitoring alerts |
+| `ev_social_settings` | `MonitorSettings` | Social monitor configuration |
+| `ev_safety_monitor_settings` | `SafetyMonitorSettings` | Survivors safety monitor configuration |
+| `ev_safety_monitor_activity` | `Record<caseId, ISO>` | Last activity timestamp per case |
+| `ev_safety_monitor_alerts` | `Array<SafetyAlertEntry>` | Safety monitor alert log |
+| `ev_safety_monitor_notified` | `string[]` | Case IDs already notified (to avoid duplicate emails) |
+
 ## API Reference
 All endpoints are served from `server.ts` on port 3000.
+
 ### Authentication (Mocked)
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`POST`
-|
-`/api/auth/login`
-|
- Login by email (returns mock JWT) 
-|
-|
-`GET`
-|
-`/api/me`
-|
- Get current user (always returns mock user) 
-|
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/api/auth/login` | Login by email (returns mock JWT in demo mode) |
+| GET | `/api/me` | Get current user (returns demo user or Firebase user) |
+
 ### Cases
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`GET`
-|
-`/api/cases`
-|
- List all cases for current user 
-|
-|
-`POST`
-|
-`/api/cases`
-|
- Create new case 
-`{title, description}`
-|
-|
-`GET`
-|
-`/api/cases/:id`
-|
- Get case with evidence and audit logs 
-|
-|
-`POST`
-|
-`/api/cases/:id/delete`
-|
- Delete case (cascade: evidence files, audit logs) 
-|
-|
-`GET`
-|
-`/api/cases/:id/export`
-|
- Export case as ZIP (metadata + evidence + SHA256SUMS + report) 
-|
-|
-`GET`
-|
-`/api/admin/cases`
-|
- List all escalated cases (admin) 
-|
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/api/cases` | List all cases for current user |
+| POST | `/api/cases` | Create new case — body: `{ title, description }` |
+| GET | `/api/cases/:id` | Get case with evidence and audit logs |
+| POST | `/api/cases/:id/delete` | Delete case (cascade: evidence files, audit logs) |
+| GET | `/api/cases/:id/export` | Export case as ZIP (metadata + evidence + SHA256SUMS + report) |
+| GET | `/api/admin/cases` | List escalated cases (admin only) |
+
 ### Evidence
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`POST`
-|
-`/api/cases/:id/evidence`
-|
- Upload evidence file (multipart, 
-`file`
- field + 
-`client_sha256`
-) 
-|
-|
-`POST`
-|
-`/api/preserve`
-|
- Preserve evidence 
-`{evidenceId, caseId, serverHash}`
-|
-|
-`POST`
-|
-`/api/evidence/:id/link`
-|
- Link evidence to a case 
-|
-|
-`POST`
-|
-`/api/cases/:id/verify`
-|
- Log manual verification attempt 
-|
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/api/cases/:id/evidence` | Upload evidence file (multipart `file`, include `client_sha256` field) |
+| POST | `/api/preserve` | Preserve evidence — body: `{ evidenceId, caseId, serverHash }` |
+| POST | `/api/evidence/:id/link` | Link an existing evidence record to a case |
+| POST | `/api/cases/:id/verify` | Log manual verification attempt |
+
 ### AI Analysis
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`POST`
-|
-`/api/analyze`
-|
- Analyze 
-`{title, description}`
- → 
-`{risk_score, risk_analysis, analysisSource}`
-|
-> **Never returns 500.** Falls back to local heuristic analyzer if Gemini fails.
-### Dead-Man Switch
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`POST`
-|
-`/api/deadman/checkin`
-|
- User check-in (resets timer) 
-|
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/api/analyze` | Analyze text (body: `{ title, description }`) → returns `{ risk_score, risk_analysis, analysisSource }` |
+
+> Note: `/api/analyze` never returns 500 — it falls back to a local heuristic analyzer if Gemini fails.
+
+### Dead-Man Switch (DMS)
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/api/deadman/checkin` | User check-in (resets DMS timer) |
+
 ### Safety Settings
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`GET`
-|
-`/api/safety`
-|
- Get trusted contacts + DMS interval 
-|
-|
-`POST`
-|
-`/api/safety`
-|
- Update trusted contacts + DMS interval 
-|
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/api/safety` | Get trusted contacts and DMS interval |
+| POST | `/api/safety` | Update trusted contacts and DMS interval (body: `{ trustedContacts, deadManIntervalHours, reminderMinutesBefore }`) |
+
 ### Emergency Release
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`GET`
-|
-`/api/emergency-release/config`
-|
- Get emergency release config 
-|
-|
-`POST`
-|
-`/api/emergency-release/config`
-|
- Update emergency release config 
-|
-|
-`POST`
-|
-`/api/emergency-release/test`
-|
- Send test email 
-|
-|
-`POST`
-|
-`/api/emergency-release/reset`
-|
- Reset sent flag (allow re-send) 
-|
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/api/emergency-release/config` | Retrieve emergency release configuration |
+| POST | `/api/emergency-release/config` | Update emergency release configuration |
+| POST | `/api/emergency-release/test` | Send a test emergency email (demo mode uses Ethereal) |
+| POST | `/api/emergency-release/reset` | Reset the "sent" flag to allow re-sending |
+
 ### Social Monitor
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`POST`
-|
-`/api/social-monitor/dms-fire`
-|
- Fire DMS emergency email for social media threat 
-|
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/api/social-monitor/dms-fire` | Trigger DMS emergency flow for a detected social media threat |
+
 ### Cloud Functions Compatibility
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`POST`
-|
-`/functions/startUpload`
-|
- Register evidence for upload (local fallback for Firebase Functions) 
-|
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/functions/startUpload` | Register evidence for upload (compatibility shim for Firebase Functions) |
+
 ### Report Download
-|
- Method 
-|
- Endpoint 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`GET`
-|
-`/download/report/:token`
-|
- Download ZIP by token (requires 
-`?email=`
- query for verification) 
-|
----
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/download/report/:token` | Download ZIP by token (requires `?email=` query parameter for basic verification) |
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/download/report/:token` | Download ZIP by token (requires `?email=` query parameter for basic verification) |
+
 ## Frontend Pages & Routes
-|
- Path 
-|
- Component 
-|
- Auth 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
----
-|
-|
-`/`
-|
-`HomePage`
-|
- Public 
-|
- Animated landing page with feature showcase 
-|
-|
-`/login`
-|
-`Login`
-|
- Public 
-|
- Firebase Auth login / demo mode login 
-|
-|
-`/register`
-|
-`Login`
- (sign-up mode) 
-|
- Public 
-|
- Registration form 
-|
-|
-`/unauthorized`
-|
-`UnauthorizedPage`
-|
- Public 
-|
- 403 error page 
-|
-|
-`/access/:token`
-|
-`EmergencyAccessPage`
-|
- Public 
-|
- One-time emergency access (no auth) 
-|
-|
-`/dashboard`
-|
-`Dashboard`
-|
- Protected 
-|
- Case management (create, view, filter, metrics) 
-|
-|
-`/cases/:id`
-|
-`CaseDetails`
-|
- Protected 
-|
- Individual case (evidence, logs, status workflow) 
-|
-|
-`/upload`
-|
-`EvidenceUpload`
-|
- Protected 
-|
- Evidence upload + AI analysis + preservation 
-|
-|
-`/ai-analysis`
-|
-`AIAnalysisPage`
-|
- Protected 
-|
- Standalone AI threat analysis 
-|
-|
-`/authority`
-|
-`AuthorityDashboard`
-|
- Protected (admin) 
-|
- Admin view: all escalated cases, metrics 
-|
-|
-`/social-monitor`
-|
-`SocialMonitoringPage`
-|
- Protected 
-|
- Social media monitoring + DMS 
-|
-|
-`/settings`
-|
-`SettingsPage`
-|
- Protected 
-|
- DMS config, trusted contacts, emergency release 
-|
-|
-`*`
-|
- Redirect to 
-`/`
-|
- — 
-|
- Catch-all 404 redirect 
-|
+
+| Path | Component | Auth | Description |
+| --- | --- | --- | --- |
+| `/` | `HomePage` | Public | Animated landing page with feature highlights |
+| `/login` | `Login` | Public | Firebase Auth login / demo-mode login |
+| `/register` | `Login` (sign-up mode) | Public | Registration form (demo or Firebase) |
+| `/unauthorized` | `UnauthorizedPage` | Public | 403/Access denied page |
+| `/access/:token` | `EmergencyAccessPage` | Public | One-time emergency access for trusted contacts |
+| `/dashboard` | `Dashboard` | Protected | Case management: create, view, filter, metrics |
+| `/cases/:id` | `CaseDetails` | Protected | Individual case view (evidence, logs, actions) |
+| `/upload` | `EvidenceUpload` | Protected | Evidence upload, client SHA-256, AI analysis, preserve workflow |
+| `/ai-analysis` | `AIAnalysisPage` | Protected | Standalone AI threat analysis tool |
+| `/authority` | `AuthorityDashboard` | Protected (admin) | Admin: escalated cases, metrics, investigator tools |
+| `/social-monitor` | `SocialMonitoringPage` | Protected | Social media monitoring and DMS integration |
+| `/settings` | `SettingsPage` | Protected | Dead-Man Switch config, trusted contacts, emergency release |
+| `*` | Redirect to `/` | — | Catch-all redirect (404) |
+
 ### Route Guards
+- **`ProtectedRoute`**: Redirects to `/login` if `user` is null.
+- **`AuthRoute`**: Redirects authenticated users to `/dashboard`.
+- Admin-only routes render an access-denied redirect for non-admin users.
+
 - **`ProtectedRoute`**: Redirects to `/login` if `user` is null
 - **`AuthRoute`**: Redirects to `/dashboard` if user is already authenticated
 - **Admin check**: Authority Dashboard renders `<Navigate>` for non-admin users
