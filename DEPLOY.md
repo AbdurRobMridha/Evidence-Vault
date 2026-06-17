@@ -93,4 +93,9 @@ rm -rf data/vault.db
 - Monitor usage in Render dashboard
 
 ---
+## Demo & Live Site
+- Demo video: https://youtu.be/_vztS2-JNHs
+- Live site: https://evidence-vault-yuqu.onrender.com
+
+---
 Need help? Check Render docs: https://render.com/docs
