@@ -1,6 +1,15 @@
 # Evidence Vault
-> **Secure Digital Evidence Preservation Platform** — A full-stack web application for cryptographic evidence preservation, AI-powered threat analysis, forensic reporting, and automated safety mechanisms (Dead-Man Switch). Built for cybercrime victims, investigators, and legal authorities.
+
+[![Live Site](https://img.shields.io/badge/Live-evidence--vault--yuqu.onrender.com-brightgreen)](https://evidence-vault-yuqu.onrender.com) [![Demo Video](https://img.shields.io/badge/Watch-Demo%20Video-red)](https://youtu.be/_vztS2-JNHs)
+
+A professional, secure platform for preserving digital evidence, AI-powered threat analysis, forensic reporting, and automated emergency release (Dead-Man Switch).
+
+Quick links:
+- Live site: https://evidence-vault-yuqu.onrender.com
+- Demo video: https://youtu.be/_vztS2-JNHs
+
 ---
+
 ## Table of Contents
 - [Project Identity](#project-identity)
 - [Problem Statement](#problem-statement)
