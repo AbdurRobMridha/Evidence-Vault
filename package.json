@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "cd Evidence_Vault && npm install && npm run build",
+    "build": "cd Evidence_Vault && rm -rf node_modules package-lock.json && npm install && npm run build",
     "start": "cd Evidence_Vault && npm start"
   },
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   }
 }
