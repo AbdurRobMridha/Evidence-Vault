@@ -33,69 +33,17 @@ Quick links:
 - [Design Decisions & Trade-offs](#design-decisions--trade-offs)
 ---
 ## Project Identity
-|
- Field 
-|
- Value 
-|
-|
----
-|
----
-|
-|
-**
-Name
-**
-|
- Evidence Vault 
-|
-|
-**
-Monorepo Root
-**
-|
-`Evidence_Vault/`
-|
-|
-**
-Package Name
-**
-|
-`react-example`
- (inherited from AI Studio scaffold) 
-|
-|
-**
-Version
-**
-|
-`0.0.0`
- (prototype/hackathon stage) 
-|
-|
-**
-Module System
-**
-|
- ESM (
-`"type": "module"`
-) 
-|
-|
-**
-License
-**
-|
- Unlicensed (private project) 
-|
-|
-**
-Origin
-**
-|
- Built via Google AI Studio, designed for hackathon/demo 
-|
+
+| Field | Value |
+| --- | --- |
+| Name | **Evidence Vault** |
+| Monorepo Root | `Evidence_Vault/` |
+| Package Name | `react-example` (inherited from AI Studio scaffold) |
+| Version | `0.0.0` (prototype / hackathon) |
+| Module System | ESM (`"type": "module"`) |
+| License | Unlicensed (private project) |
+| Origin | Built via Google AI Studio (hackathon/demo) |
+
 ---
 ## Problem Statement
 Victims of cyber harassment, technology-facilitated abuse, stalking, and digital fraud need a secure platform to:
