@@ -629,196 +629,43 @@ npm run dev
 # Server starts at http://localhost:3000
 ```
 ### Available Scripts
-|
- Script 
-|
- Command 
-|
- Description 
-|
-|
----
-|
----
-|
----
-|
-|
-`dev`
-|
-`tsx server.ts`
-|
- Start dev server (Express + Vite middleware) 
-|
-|
-`build`
-|
-`vite build`
-|
- Production build 
-|
-|
-`preview`
-|
-`vite preview`
-|
- Preview production build 
-|
-|
-`clean`
-|
-`rm -rf dist`
-|
- Clean build output 
-|
-|
-`lint`
-|
-`tsc --noEmit`
-|
- Type checking 
-|
-|
-`start`
-|
-`node server.ts`
-|
- Start production server 
-|
----
+
+| Script | Command | Description |
+| :--- | :--- | :--- |
+| `dev` | `tsx server.ts` | Start dev server (Express + Vite middleware) |
+| `build` | `vite build` | Production build |
+| `preview` | `vite preview` | Preview production build |
+| `clean` | `rm -rf dist` | Clean build output |
+| `lint` | `tsc --noEmit` | Type checking |
+| `start` | `node server.ts` | Start production server |
+
 ## Demo Credentials
+
 ### Pre-seeded Users (SQLite)
-|
- Email 
-|
- Role 
-|
- Password 
-|
-|
----
-|
----
-|
----
-|
-|
-`victim@example.com`
-|
- user 
-|
-*
-(any — mock auth)
-*
-|
-|
-`authority@police.gov`
-|
- admin 
-|
-*
-(any — mock auth)
-*
-|
+
+| Email | Role | Password |
+| :--- | :--- | :--- |
+| `victim@example.com` | user | *(any — mock auth)* |
+| `authority@police.gov` | admin | *(any — mock auth)* |
+
 ### Pre-seeded RBAC Users (localStorage)
-|
- Email 
-|
- Role 
-|
- Name 
-|
-|
----
-|
----
-|
----
-|
-|
-`authority@police.gov`
-|
- admin 
-|
- Authority Admin 
-|
-|
-`rahman@investigation.bd`
-|
- investigator 
-|
- Detective Rahman 
-|
-|
-`karim@investigation.bd`
-|
- investigator 
-|
- Officer Karim 
-|
-|
-`victim@example.com`
-|
- user 
-|
- Victim User 
-|
+
+| Email | Role | Name |
+| :--- | :--- | :--- |
+| `authority@police.gov` | admin | Authority Admin |
+| `rahman@investigation.bd` | investigator | Detective Rahman |
+| `karim@investigation.bd` | investigator | Officer Karim |
+| `victim@example.com` | user | Victim User |
+
 ### Demo Cases (auto-seeded)
-|
- ID 
-|
- Title 
-|
- Status 
-|
- Priority 
-|
-|
----
-|
----
-|
----
-|
----
-|
-|
-`demo-case-001`
-|
- Phishing Email Investigation 
-|
- Under Investigation 
-|
- High 
-|
-|
-`demo-case-002`
-|
- Financial Fraud Analysis 
-|
- Evidence Verified 
-|
- Critical 
-|
-|
-`demo-case-003`
-|
- Social Media Harassment Report 
-|
- Open 
-|
- Medium 
-|
-|
-`demo-case-004`
-|
- Data Breach Forensics 
-|
- Draft 
-|
- High 
-|
----
+
+| ID | Title | Status | Priority |
+| :--- | :--- | :--- | :--- |
+| `demo-case-001` | Phishing Email Investigation | Under Investigation | High |
+| `demo-case-002` | Financial Fraud Analysis | Evidence Verified | Critical |
+| `demo-case-003` | Social Media Harassment Report | Open | Medium |
+| `demo-case-004` | Data Breach Forensics | Draft | High |
+
 ## Design Decisions & Trade-offs
 1. **Dual Storage (localStorage + SQLite)**: Allows offline-first demo without Firebase, while the server maintains authoritative state. Trade-off: data can diverge between client and server.
 2. **Mock Authentication**: The server uses hardcoded `mockUserId` for all requests. Real Firebase Auth is optional and only used for the login flow. Trade-off: no real access control at the API level in demo mode.
