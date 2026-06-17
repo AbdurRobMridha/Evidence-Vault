@@ -4,8 +4,8 @@ services:
     env: node
     plan: free
     branch: main
-    buildCommand: cd Evidence_Vault && npm install && npm run build
-    startCommand: cd Evidence_Vault && npm start
+    buildCommand: bash -c "cd Evidence_Vault && npm ci && npm run build"
+    startCommand: bash -c "cd Evidence_Vault && npm start"
     envVars:
       - key: NODE_ENV
         value: production
