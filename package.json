@@ -1,0 +1,13 @@
+{
+  "name": "evidence-vault",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "cd Evidence_Vault && npm install && npm run build",
+    "start": "cd Evidence_Vault && npm start"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
